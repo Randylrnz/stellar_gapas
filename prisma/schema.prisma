@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  walletAddress String        @unique
+  role          UserRole      @default(FARMER)
+  displayName   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  farms         Farm[]        @relation("FarmerFarms")
+  investments   Investment[]
+  transactions  Transaction[]
+}
+
+enum UserRole {
+  FARMER
+  INVESTOR
+  COOPERATIVE
+  ADMIN
+}
+
+model Cooperative {
+  id             String   @id @default(cuid())
+  name           String
+  barangay       String
+  municipality   String
+  walletAddress  String   @unique
+  verifiedStatus Boolean  @default(false)
+  totalEarnings  Float    @default(0)
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  farms          Farm[]
+}
+
+model Farm {
+  id                 String      @id @default(cuid())
+  name               String
+  cropType           String?
+  livestockType      String?
+  description        String?
+  location           String?
+  fundingGoal        Float
+  currentFunding     Float       @default(0)
+  expectedYield      String?
+  expectedReturn     Float       @default(0)
+  riskLevel          RiskLevel   @default(MEDIUM)
+  duration           Int         // in days
+  harvestSchedule    String?
+  status             FarmStatus  @default(PENDING)
+  contractAddress    String?
+  farmerWallet       String
+  farmer             User        @relation("FarmerFarms", fields: [farmerWallet], references: [walletAddress])
+  cooperativeId      String?
+  cooperative        Cooperative? @relation(fields: [cooperativeId], references: [id])
+  cooperativeEnabled Boolean     @default(false)
+  weatherRisk        WeatherRisk @default(MODERATE)
+  imageUrl           String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  investments        Investment[]
+  transactions       Transaction[]
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum FarmStatus {
+  PENDING
+  ACTIVE
+  FUNDED
+  HARVESTING
+  COMPLETED
+  CANCELLED
+}
+
+enum WeatherRisk {
+  LOW
+  MODERATE
+  HIGH
+}
+
+model Investment {
+  id             String   @id @default(cuid())
+  farmId         String
+  farm           Farm     @relation(fields: [farmId], references: [id])
+  investorWallet String
+  investor       User     @relation(fields: [investorWallet], references: [walletAddress])
+  amount         Float
+  txHash         String?
+  status         String   @default("ACTIVE")
+  returnAmount   Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Transaction {
+  id            String          @id @default(cuid())
+  txHash        String          @unique
+  type          TransactionType
+  amount        Float
+  fromWallet    String?
+  toWallet      String?
+  farmId        String?
+  farm          Farm?           @relation(fields: [farmId], references: [id])
+  userWallet    String?
+  user          User?           @relation(fields: [userWallet], references: [walletAddress])
+  memo          String?
+  status        String          @default("PENDING")
+  createdAt     DateTime        @default(now())
+}
+
+enum TransactionType {
+  FUND
+  PAYOUT
+  RETURN
+  COOPERATIVE_FEE
+  REINVESTMENT
+  CASHOUT
+}
