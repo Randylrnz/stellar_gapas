@@ -10,7 +10,7 @@ import {
 import {
   ArrowLeft, MapPin, Calendar, TrendingUp, Users,
   Shield, Sprout, AlertTriangle, ExternalLink, Loader2,
-  CheckCircle
+  CheckCircle, CloudRain
 } from 'lucide-react'
 import Link from 'next/link'
 import { simulateStellarTransfer, getTxExplorerUrl } from '@/lib/stellar'
@@ -22,7 +22,7 @@ export default function FarmDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
-  const { address, isConnected, addInvestment, addTransaction, showToast, farms, setFarms } = useGapasStore()
+  const { address, isConnected, addInvestment, addTransaction, showToast, farms, setFarms, farmBarangay } = useGapasStore()
   const router = useRouter()
 
   const [amount, setAmount] = useState('')
@@ -38,31 +38,40 @@ export default function FarmDetailPage({
     return (
       <div className="page-with-nav app-container" style={{ textAlign: 'center', paddingTop: '3rem' }}>
         <span style={{ fontSize: '3rem' }}>🌾</span>
-        <p style={{ marginTop: '1rem', fontWeight: 600 }}>Farm not found</p>
+        <p style={{ marginTop: '1rem', fontWeight: 600 }}>Asset not found</p>
         <Link href="/farms" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-flex' }}>
-          Browse Farms
+          Back to Palengke
         </Link>
       </div>
     )
   }
 
   const progress = getFundingProgress(farm.currentFunding, farm.fundingGoal)
-  const riskClass = getRiskBadgeClass(farm.riskLevel)
-  const dist = getProfitDistribution(farm.cooperativeEnabled)
+  const dist = getProfitDistribution()
   const remaining = farm.fundingGoal - farm.currentFunding
+  const amountNum = parseFloat(amount) || 0
+
+  // Calculate investor's percentage of the total fund
+  const investorSharePercent = farm.fundingGoal > 0 ? (amountNum / farm.fundingGoal) * 100 : 0
+  // Investor's actual earnings = their % of the fund * investor pool share
+  const investorActualReturn = amountNum > 0 ? (amountNum / farm.fundingGoal) * (dist.investorPercent / 100) * farm.fundingGoal * (farm.expectedReturn / 100) : 0
+
+  // Weather risk based on farm's barangay location (fall back to farm.location if no user barangay)
+  const weatherLocation = farm.location || (farmBarangay ? `Barangay ${farmBarangay}` : 'Farm Location')
 
   async function handleInvest() {
+    if (!farm) return
     if (!isConnected || !address) {
       showToast('Please connect your wallet first', 'error')
       return
     }
 
-    const amountNum = parseFloat(amount)
-    if (!amountNum || amountNum < 10) {
+    const amtNum = parseFloat(amount)
+    if (!amtNum || amtNum < 10) {
       showToast('Minimum investment is 10 USDC', 'error')
       return
     }
-    if (amountNum > remaining) {
+    if (amtNum > remaining) {
       showToast(`Maximum you can invest is ${formatUSDC(remaining)} USDC`, 'error')
       return
     }
@@ -72,7 +81,7 @@ export default function FarmDetailPage({
       const result = await simulateStellarTransfer({
         fromAddress: address,
         toAddress: farm.contractAddress || 'CONTRACT',
-        amount: amountNum,
+        amount: amtNum,
         memo: `Fund: ${farm.name}`,
       })
 
@@ -83,7 +92,7 @@ export default function FarmDetailPage({
           farmId: farm.id,
           farm,
           investorWallet: address,
-          amount: amountNum,
+          amount: amtNum,
           txHash: result.txHash,
           status: 'ACTIVE',
           createdAt: new Date().toISOString(),
@@ -92,7 +101,7 @@ export default function FarmDetailPage({
           id: `tx-${Date.now()}`,
           txHash: result.txHash,
           type: 'FUND',
-          amount: amountNum,
+          amount: amtNum,
           fromWallet: address,
           toWallet: farm.contractAddress,
           farmId: farm.id,
@@ -100,7 +109,11 @@ export default function FarmDetailPage({
           status: 'SUCCESS',
           createdAt: new Date().toISOString(),
         })
-        showToast(`Successfully invested ${formatUSDC(amountNum)} USDC!`, 'success')
+        // Update farm funding amount
+        if (typeof (useGapasStore.getState() as any).updateFarmFunding === 'function') {
+          (useGapasStore.getState() as any).updateFarmFunding(farm.id, amtNum)
+        }
+        showToast(`Successfully invested ${formatUSDC(amtNum)} USDC!`, 'success')
         setAmount('')
       } else {
         showToast(result.error || 'Investment failed', 'error')
@@ -124,7 +137,7 @@ export default function FarmDetailPage({
         gap: '0.75rem',
         borderBottom: '1px solid var(--color-border)',
       }}>
-        <Link href="/farms" style={{ color: 'var(--color-text)', display: 'flex' }} aria-label="Back to farms">
+        <Link href="/farms" style={{ color: 'var(--color-text)', display: 'flex' }} aria-label="Back to Palengke">
           <ArrowLeft size={22} />
         </Link>
         <h1 style={{ fontSize: '1rem', fontWeight: 700 }} className="truncate">{farm.name}</h1>
@@ -153,11 +166,10 @@ export default function FarmDetailPage({
           <Sprout size={36} color="rgba(255,255,255,0.9)" />
         </div>
         <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1rem', fontWeight: 600 }}>
-          {farm.cropType || farm.livestockType}
+          {farm.cropType || farm.livestockType || farm.assetType}
         </p>
         {/* Badges */}
         <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
-          <span className={`badge ${riskClass}`}>{farm.riskLevel} RISK</span>
           <span className={`badge ${farm.status === 'FUNDED' ? 'badge-success' : 'badge-info'}`}>{farm.status}</span>
         </div>
         {farm.cooperativeEnabled && farm.cooperative && (
@@ -222,27 +234,54 @@ export default function FarmDetailPage({
 
         {/* Description */}
         <div className="gapas-card animate-fade-in-up delay-200" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.625rem' }}>About This Farm</h3>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.625rem' }}>About This Asset</h3>
           <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', lineHeight: 1.65 }}>
             {farm.description}
           </p>
         </div>
 
-        {/* Profit Distribution */}
+        {/* Profit Distribution — percentage-based on investor stake */}
         <div className="gapas-card animate-fade-in-up delay-250" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem' }}>
             Profit Distribution
             {farm.cooperativeEnabled && <span className="coop-badge" style={{ marginLeft: '0.5rem' }}>With Cooperative</span>}
           </h3>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '1rem', lineHeight: 1.4 }}>
+            Overall fund: <strong>{formatUSDC(farm.fundingGoal)} USDC</strong>. When a farm generates income, profit is split based on each investor's ownership percentage of the total fund.
+          </p>
+          
+          {amountNum > 0 && (
+            <div style={{
+              background: 'rgba(27,67,50,0.05)',
+              border: '1px solid rgba(27,67,50,0.15)',
+              borderRadius: 'var(--radius-md)',
+              padding: '0.75rem',
+              marginBottom: '1rem',
+              fontSize: '0.8rem'
+            }}>
+              <p style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.25rem' }}>
+                Your Investment Breakdown ({formatUSDC(amountNum)} USDC)
+              </p>
+              <p style={{ color: 'var(--color-text-secondary)' }}>
+                You own <strong>{investorSharePercent.toFixed(2)}%</strong> of the total fund.
+                From the investor pool ({dist.investorPercent}% of profit), you receive <strong>{investorSharePercent.toFixed(2)}%</strong> of that pool.
+              </p>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
             {[
-              { label: '👨‍🌾 Farmer', pct: dist.farmerPercent, color: '#1B4332' },
-              { label: '💼 Investors', pct: dist.investorPercent, color: '#3b82f6' },
-              ...(dist.cooperativeEnabled ? [{ label: '🤝 Cooperative', pct: dist.cooperativePercent, color: '#f9ad00' }] : []),
-            ].map(({ label, pct, color }) => (
+              { label: '👨‍🌾 Farmer Net Profit', pct: dist.farmerPercent, color: '#1B4332', note: `${dist.farmerPercent}% of total income` },
+              { label: '💼 Investors Pool Share', pct: dist.investorPercent, color: '#3b82f6', note: `${dist.investorPercent}% split proportionally among all investors` },
+              { label: '⚡ Platform Settlement Fee', pct: dist.platformPercent, color: '#a855f7', note: `${dist.platformPercent}% platform fee` },
+              ...(farm.cooperativeEnabled && farm.assetType === 'CROP' ? [{ label: '🤝 Cooperative Onboarding Fee', pct: dist.cooperativeFeePercent, color: '#f9ad00', note: `${dist.cooperativeFeePercent}% of asset value` }] : []),
+            ].map(({ label, pct, color, note }) => (
               <div key={label}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{label}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{label}</span>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', margin: 0 }}>{note}</p>
+                  </div>
                   <span style={{ fontSize: '0.875rem', fontWeight: 700, color }}>{pct}%</span>
                 </div>
                 <div className="progress-bar-container" style={{ height: 8 }}>
@@ -266,7 +305,7 @@ export default function FarmDetailPage({
               border: '1px solid rgba(249,173,0,0.2)',
             }}>
               <p style={{ fontSize: '0.8125rem', color: '#a67c00', fontWeight: 500 }}>
-                🤝 <strong>{farm.cooperative.name}</strong> is assisting this farm with tokenization and farmer onboarding. They earn 1% of total profit.
+                🤝 <strong>{farm.cooperative.name}</strong> assisted this farm with tokenization. They earn 0.5% of asset value.
               </p>
             </div>
           )}
@@ -288,7 +327,9 @@ export default function FarmDetailPage({
               <Users size={20} color="#fff" />
             </div>
             <div>
-              <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>Verified Farmer</p>
+              <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                {farm.farmer?.displayName || farm.farmer?.name || 'Verified Farmer'}
+              </p>
               <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
                 {shortenAddress(farm.farmerWallet)}
               </p>
@@ -305,21 +346,24 @@ export default function FarmDetailPage({
           </div>
         </div>
 
-        {/* Weather Risk */}
+        {/* Weather Risk — connected to farm's location/barangay */}
         <div className="gapas-card animate-fade-in-up delay-300" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <AlertTriangle size={16} color={farm.weatherRisk === 'LOW' ? '#16a34a' : farm.weatherRisk === 'MODERATE' ? '#d97706' : '#dc2626'} />
+            <CloudRain size={16} color="var(--color-primary)" />
             <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Weather Risk</h3>
             <span className={`badge ${farm.weatherRisk === 'LOW' ? 'badge-success' : farm.weatherRisk === 'MODERATE' ? 'badge-warning' : 'badge-danger'}`}>
               {farm.weatherRisk}
             </span>
           </div>
+          <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>
+            Based on weather data for: <strong>{weatherLocation}</strong>
+          </p>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
             {farm.weatherRisk === 'LOW'
-              ? 'Low weather risk. Favorable conditions for this crop/livestock type.'
+              ? 'Mababang weather risk. Favorable conditions for this crop/livestock type.'
               : farm.weatherRisk === 'MODERATE'
-              ? 'Moderate weather risk. Seasonal rainfall may affect yield by ±15%.'
-              : 'High weather risk. Storm season active. Invest with caution.'}
+              ? 'Katamtamang weather risk. Seasonal rainfall may affect yield by ±15%.'
+              : 'Mataas na weather risk. Storm season active. Mag-invest nang maingat.'}
           </p>
         </div>
 
@@ -345,7 +389,7 @@ export default function FarmDetailPage({
         ) : (
           <div className="gapas-card animate-fade-in-up delay-300" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>
-              💰 Invest in This Farm
+              Mag-Invest sa Asset na Ito
             </h3>
             {!isConnected ? (
               <div style={{ textAlign: 'center', padding: '1rem' }}>
@@ -376,7 +420,7 @@ export default function FarmDetailPage({
                     Max: {formatUSDC(remaining)} USDC available
                   </p>
                 </div>
-                {amount && parseFloat(amount) > 0 && (
+                {amountNum > 0 && (
                   <div style={{
                     background: 'var(--color-surface)',
                     borderRadius: 'var(--radius-md)',
@@ -386,18 +430,22 @@ export default function FarmDetailPage({
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
                       <span>Your investment</span>
-                      <span style={{ fontWeight: 600 }}>{formatUSDC(parseFloat(amount))} USDC</span>
+                      <span style={{ fontWeight: 600 }}>{formatUSDC(amountNum)} USDC</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
-                      <span>Expected return ({farm.expectedReturn}%)</span>
+                      <span>Your ownership %</span>
+                      <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{investorSharePercent.toFixed(2)}% of fund</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                      <span>Expected return ({farm.expectedReturn}% yield × your share)</span>
                       <span style={{ fontWeight: 600, color: '#16a34a' }}>
-                        +{formatUSDC(parseFloat(amount) * farm.expectedReturn / 100)} USDC
+                        +{formatUSDC(amountNum * farm.expectedReturn / 100)} USDC
                       </span>
                     </div>
                     <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '0.375rem', display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontWeight: 700 }}>Total return</span>
                       <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>
-                        {formatUSDC(parseFloat(amount) * (1 + farm.expectedReturn / 100))} USDC
+                        {formatUSDC(amountNum * (1 + farm.expectedReturn / 100))} USDC
                       </span>
                     </div>
                   </div>
@@ -405,7 +453,7 @@ export default function FarmDetailPage({
                 <button
                   id="invest-submit-btn"
                   onClick={handleInvest}
-                  disabled={investing || !amount || parseFloat(amount) < 10}
+                  disabled={investing || !amount || amountNum < 10}
                   className="btn btn-primary btn-full btn-lg"
                 >
                   {investing ? (

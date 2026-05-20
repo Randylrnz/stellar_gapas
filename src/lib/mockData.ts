@@ -2,6 +2,18 @@ import type { Farm, Cooperative, Investment, Transaction } from '@/lib/types'
 
 export const MOCK_COOPERATIVES: Cooperative[] = [
   {
+    id: 'coop-4',
+    name: 'Atok Farmers Cooperative',
+    barangay: 'Atok',
+    municipality: 'Benguet',
+    walletAddress: 'GCOOPATOKBENGETAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    verifiedStatus: true,
+    totalEarnings: 4500.0,
+    description: 'Highland vegetable and strawberry farming cooperative in Benguet.',
+    createdAt: '2024-01-10T00:00:00Z',
+    _count: { farms: 15 },
+  },
+  {
     id: 'coop-1',
     name: 'Sta. Rosa Agricultural Cooperative',
     barangay: 'Sta. Rosa',

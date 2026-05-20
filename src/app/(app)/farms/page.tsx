@@ -4,17 +4,16 @@ import { useState, useEffect } from 'react'
 import { useGapasStore } from '@/store/useGapasStore'
 import FarmCard from '@/components/FarmCard'
 import { MOCK_FARMS } from '@/lib/mockData'
-import type { Farm, RiskLevel } from '@/lib/types'
-import { Search, SlidersHorizontal, X } from 'lucide-react'
+import type { Farm } from '@/lib/types'
+import { Search, X, Plus } from 'lucide-react'
+import Link from 'next/link'
 
-type FilterType = 'ALL' | 'CROP' | 'LIVESTOCK'
+type FilterCategory = 'MY_ASSETS' | 'ALL' | 'CROP' | 'LIVESTOCK' | 'EQUIPMENT' | 'CARBON'
 
 export default function FarmsPage() {
-  const { setFarms, farms } = useGapasStore()
+  const { setFarms, farms, address, activeRole } = useGapasStore()
   const [search, setSearch] = useState('')
-  const [filterType, setFilterType] = useState<FilterType>('ALL')
-  const [filterRisk, setFilterRisk] = useState<RiskLevel | 'ALL'>('ALL')
-  const [showFilters, setShowFilters] = useState(false)
+  const [filterCategory, setFilterCategory] = useState<FilterCategory>('ALL')
 
   useEffect(() => {
     setFarms(MOCK_FARMS)
@@ -24,26 +23,48 @@ export default function FarmsPage() {
     const matchSearch =
       farm.name.toLowerCase().includes(search.toLowerCase()) ||
       (farm.cropType ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      (farm.location ?? '').toLowerCase().includes(search.toLowerCase())
+      (farm.location ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (farm.livestockType ?? '').toLowerCase().includes(search.toLowerCase())
 
-    const matchType =
-      filterType === 'ALL'
-        ? true
-        : filterType === 'CROP'
-        ? !!farm.cropType
-        : !!farm.livestockType
+    const matchCategory = (() => {
+      if (filterCategory === 'ALL') return true
+      if (filterCategory === 'MY_ASSETS') return farm.farmerWallet === address
+      if (filterCategory === 'CROP') return !!farm.cropType && farm.assetType !== 'EQUIPMENT' && farm.assetType !== 'CARBON'
+      if (filterCategory === 'LIVESTOCK') return !!farm.livestockType || farm.assetType === 'LIVESTOCK'
+      if (filterCategory === 'EQUIPMENT') return farm.assetType === 'EQUIPMENT'
+      if (filterCategory === 'CARBON') return farm.assetType === 'CARBON'
+      return true
+    })()
 
-    const matchRisk = filterRisk === 'ALL' ? true : farm.riskLevel === filterRisk
-
-    return matchSearch && matchType && matchRisk
+    return matchSearch && matchCategory
   })
+
+  const filterTabs: { id: FilterCategory; label: string }[] = [
+    { id: 'MY_ASSETS', label: 'My Assets' },
+    { id: 'ALL', label: 'All Items' },
+    { id: 'CROP', label: 'Crops' },
+    { id: 'LIVESTOCK', label: 'Livestock' },
+    { id: 'EQUIPMENT', label: 'Equipment' },
+    { id: 'CARBON', label: 'Carbon Credits' },
+  ]
 
   return (
     <div className="page-with-nav app-container">
       {/* Header */}
-      <div className="page-header animate-fade-in-up">
-        <h1 className="page-title">🌾 Farm Marketplace</h1>
-        <p className="page-subtitle">Invest in verified Philippine farms</p>
+      <div className="page-header animate-fade-in-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 className="page-title">Palengke</h1>
+          <p className="page-subtitle">Mag-invest sa verified Philippine farm assets</p>
+        </div>
+        <Link
+          href="/cooperative"
+          className="btn btn-primary"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.8rem', textDecoration: 'none', flexShrink: 0 }}
+          id="palengke-register-assets-btn"
+        >
+          <Plus size={15} />
+          Register My Assets
+        </Link>
       </div>
 
       {/* Search bar */}
@@ -58,7 +79,7 @@ export default function FarmsPage() {
             id="farms-search"
             type="text"
             className="form-input"
-            placeholder="Search farms, crops, location..."
+            placeholder="Search assets, crops, location..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ paddingLeft: '2.75rem', paddingRight: '3rem' }}
@@ -86,32 +107,19 @@ export default function FarmsPage() {
         </div>
       </div>
 
-      {/* Filter row */}
+      {/* Filter row — category tabs only (no Risk) */}
       <div className="animate-fade-in-up delay-150" style={{ marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', overflowX: 'auto', paddingBottom: '0.25rem' }}>
-          {(['ALL', 'CROP', 'LIVESTOCK'] as FilterType[]).map((t) => (
+          {filterTabs.map((tab) => (
             <button
-              key={t}
-              id={`filter-type-${t.toLowerCase()}`}
-              onClick={() => setFilterType(t)}
-              className={`btn btn-sm ${filterType === t ? 'btn-primary' : 'btn-ghost'}`}
-              style={{ borderRadius: 'var(--radius-full)', flexShrink: 0 }}
-              aria-pressed={filterType === t}
+              key={tab.id}
+              id={`filter-${tab.id.toLowerCase()}`}
+              onClick={() => setFilterCategory(tab.id)}
+              className={`btn btn-sm ${filterCategory === tab.id ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ borderRadius: 'var(--radius-full)', flexShrink: 0, boxShadow: 'none', border: filterCategory === tab.id ? 'none' : '1px solid var(--color-border)' }}
+              aria-pressed={filterCategory === tab.id}
             >
-              {t === 'ALL' ? '🌾 All' : t === 'CROP' ? '🌱 Crops' : '🐄 Livestock'}
-            </button>
-          ))}
-          <div style={{ width: '1px', height: '24px', background: 'var(--color-border)', flexShrink: 0 }} />
-          {(['ALL', 'LOW', 'MEDIUM', 'HIGH'] as const).map((r) => (
-            <button
-              key={r}
-              id={`filter-risk-${r.toLowerCase()}`}
-              onClick={() => setFilterRisk(r)}
-              className={`btn btn-sm ${filterRisk === r ? 'btn-primary' : 'btn-ghost'}`}
-              style={{ borderRadius: 'var(--radius-full)', flexShrink: 0 }}
-              aria-pressed={filterRisk === r}
-            >
-              {r === 'ALL' ? 'All Risk' : r}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -119,7 +127,8 @@ export default function FarmsPage() {
 
       {/* Results count */}
       <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
-        {filtered.length} farm{filtered.length !== 1 ? 's' : ''} found
+        {filtered.length} asset{filtered.length !== 1 ? 's' : ''} found
+        {filterCategory === 'MY_ASSETS' && ' (your registered assets)'}
       </p>
 
       {/* Farm grid */}
@@ -130,8 +139,19 @@ export default function FarmsPage() {
           color: 'var(--color-text-muted)',
         }}>
           <span style={{ fontSize: '3rem' }}>🌾</span>
-          <p style={{ marginTop: '0.75rem', fontWeight: 600 }}>No farms found</p>
-          <p style={{ fontSize: '0.875rem' }}>Try a different search or filter</p>
+          <p style={{ marginTop: '0.75rem', fontWeight: 600 }}>
+            {filterCategory === 'MY_ASSETS' ? 'Wala pang naka-register na assets.' : 'No assets found'}
+          </p>
+          <p style={{ fontSize: '0.875rem' }}>
+            {filterCategory === 'MY_ASSETS'
+              ? 'I-register ang iyong assets para makita dito.'
+              : 'Try a different search or filter'}
+          </p>
+          {filterCategory === 'MY_ASSETS' && (
+            <Link href="/cooperative" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-flex', textDecoration: 'none' }}>
+              Register My Assets
+            </Link>
+          )}
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>

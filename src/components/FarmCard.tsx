@@ -1,19 +1,24 @@
 'use client'
 
 import type { Farm } from '@/lib/types'
-import { formatUSDC, getFundingProgress, getRiskBadgeClass } from '@/lib/types'
+import { formatUSDC, getFundingProgress } from '@/lib/types'
 import Link from 'next/link'
-import { Sprout, Users, MapPin, TrendingUp } from 'lucide-react'
+import { Sprout, Users, MapPin, TrendingUp, User } from 'lucide-react'
 
 interface FarmCardProps {
   farm: Farm
   compact?: boolean
 }
 
+function shortenWallet(address: string): string {
+  if (!address) return 'Unknown'
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
 export default function FarmCard({ farm, compact = false }: FarmCardProps) {
   const progress = getFundingProgress(farm.currentFunding, farm.fundingGoal)
-  const riskClass = getRiskBadgeClass(farm.riskLevel)
-  const assetLabel = farm.cropType || farm.livestockType || 'Unknown'
+  const assetLabel = farm.cropType || farm.livestockType || farm.assetType || 'Unknown'
+  const ownerName = farm.farmer?.displayName || farm.farmer?.name || shortenWallet(farm.farmerWallet)
 
   return (
     <Link href={`/farms/${farm.id}`} className="farm-card animate-fade-in-up" id={`farm-card-${farm.id}`}>
@@ -54,16 +59,6 @@ export default function FarmCard({ farm, compact = false }: FarmCardProps) {
             {farm.status}
           </span>
         </div>
-        {/* Risk badge */}
-        <div style={{
-          position: 'absolute',
-          top: '0.75rem',
-          right: '0.75rem',
-        }}>
-          <span className={`badge ${riskClass}`}>
-            {farm.riskLevel} RISK
-          </span>
-        </div>
         {/* Coop badge */}
         {farm.cooperativeEnabled && farm.cooperative && (
           <div style={{
@@ -82,9 +77,17 @@ export default function FarmCard({ farm, compact = false }: FarmCardProps) {
       <div className="farm-card-body">
         <h3 className="farm-card-title">{farm.name}</h3>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.35rem' }}>
           <MapPin size={12} color="var(--color-text-muted)" />
           <span className="farm-card-meta" style={{ marginBottom: 0 }}>{farm.location || 'Philippines'}</span>
+        </div>
+
+        {/* Owner name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.75rem' }}>
+          <User size={12} color="var(--color-text-muted)" />
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+            Owner: {ownerName}
+          </span>
         </div>
 
         {!compact && (
