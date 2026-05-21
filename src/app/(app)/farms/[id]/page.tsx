@@ -126,17 +126,7 @@ export default function FarmDetailPage({
   return (
     <div className="page-with-nav">
       {/* Back header */}
-      <div style={{
-        position: 'sticky',
-        top: 0,
-        background: 'var(--color-surface)',
-        zIndex: 50,
-        padding: '0.875rem 1rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.75rem',
-        borderBottom: '1px solid var(--color-border)',
-      }}>
+      <div className="sticky-back-header">
         <Link href="/farms" style={{ color: 'var(--color-text)', display: 'flex' }} aria-label="Back to Palengke">
           <ArrowLeft size={22} />
         </Link>
@@ -215,7 +205,7 @@ export default function FarmDetailPage({
         </div>
 
         {/* Key Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '1rem' }} className="animate-fade-in-up delay-150">
+        <div className="responsive-grid-2 animate-fade-in-up delay-150" style={{ gap: '0.75rem', marginBottom: '1rem' }}>
           {[
             { icon: TrendingUp, label: 'Expected Return', value: `+${farm.expectedReturn}%`, color: 'var(--color-primary)' },
             { icon: Calendar, label: 'Duration', value: `${farm.duration} days`, color: 'var(--color-text)' },

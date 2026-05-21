@@ -211,7 +211,6 @@ export function formatPHP(amount: number): string {
 
 // 1 USDC ≈ 57.43 PHP (V2.0 exact live rate)
 export const USDC_TO_PHP_RATE = 57.43
-export const XLM_TO_USDC_RATE = 0.115
 
 export function usdcToPhp(usdc: number): number {
   return usdc * USDC_TO_PHP_RATE

@@ -50,6 +50,7 @@
   --nav-height: 72px;
   --bottom-nav-height: 80px;
   --sidebar-width: 260px;
+  --mobile-header-height: 64px;
 }
 
 * {
@@ -94,6 +95,7 @@ h1, h2, h3, h4, h5, h6 {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  transition: margin-left 0.2s ease;
 }
 
 .app-container {
@@ -108,6 +110,176 @@ h1, h2, h3, h4, h5, h6 {
   padding-top: 2rem;
   min-height: 100vh;
   width: 100%;
+}
+
+/* ========================
+   RESPONSIVE LAYOUT & HEADER
+   ======================== */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--mobile-header-height);
+  background: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+  z-index: 200;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.mobile-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 199;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-drawer {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  width: calc(100% - 2rem);
+  max-width: 320px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-xl);
+  z-index: 200;
+  padding: 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(calc(100% + 2rem));
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-xl), 0 8px 32px rgba(27, 67, 50, 0.15);
+}
+
+.mobile-drawer.open {
+  transform: translateX(0);
+}
+
+@media (min-width: 769px) {
+  .mobile-drawer, .mobile-drawer-overlay {
+    display: none !important;
+  }
+}
+
+/* Responsive grid layouts */
+.responsive-grid-4 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .responsive-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .responsive-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.responsive-grid-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid-actions {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.coop-ticketing-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+@media (min-width: 1024px) {
+  .coop-ticketing-layout.has-selected {
+    grid-template-columns: 1.2fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .responsive-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Mobile Media Queries */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none !important;
+  }
+  .app-main {
+    margin-left: 0 !important;
+    padding-top: var(--mobile-header-height);
+  }
+  .mobile-header {
+    display: flex;
+  }
+  .app-container {
+    padding: 0 1rem;
+  }
+}
+
+/* Sticky back headers for sub-pages */
+.sticky-back-header {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  z-index: 50;
+  padding: 0.875rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (max-width: 768px) {
+  .sticky-back-header {
+    top: var(--mobile-header-height);
+  }
 }
 
 /* ========================
@@ -1006,3 +1178,89 @@ h1, h2, h3, h4, h5, h6 {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+
+/* ========================
+   RESPONSIVE GRID STACK UTILITIES
+   ======================== */
+.grid-responsive-split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 768px) {
+  .grid-responsive-split {
+    grid-template-columns: 1fr 1.5fr;
+  }
+}
+
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 768px) {
+  .grid-responsive-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.grid-responsive-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 768px) {
+  .grid-responsive-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.grid-responsive-4 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 640px) {
+  .grid-responsive-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .grid-responsive-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.grid-responsive-1-2-1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+@media (min-width: 768px) {
+  .grid-responsive-1-2-1 {
+    grid-template-columns: 1.2fr 1fr 1fr;
+  }
+}
+
+.grid-responsive-1-5-1-1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+@media (min-width: 768px) {
+  .grid-responsive-1-5-1-1 {
+    grid-template-columns: 1.5fr 1fr 1fr;
+  }
+}
+
+.grid-responsive-1-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+@media (min-width: 768px) {
+  .grid-responsive-1-2 {
+    grid-template-columns: 1.2fr 1fr;
+  }
+}
+

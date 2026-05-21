@@ -14,6 +14,7 @@ export default function ActivitiesPage() {
   const [showReceiptModal, setShowReceiptModal] = useState<string | null>(null)
   const [showContractModal, setShowContractModal] = useState<string | null>(null)
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null)
+  const [showAllMyAssets, setShowAllMyAssets] = useState(false)
 
   useEffect(() => {
     if (myInvestments.length === 0) setMyInvestments(MOCK_INVESTMENTS)
@@ -23,7 +24,9 @@ export default function ActivitiesPage() {
   // My registered assets (farms where farmerWallet === address)
   const myAssets = farms.filter(f => f.farmerWallet === address)
   // All other farms from mock for demo purposes
-  const displayAssets = myAssets.length > 0 ? myAssets : farms.slice(0, 4)
+  const displayAssets = showAllMyAssets
+    ? (myAssets.length > 0 ? myAssets : farms)
+    : (myAssets.length > 0 ? myAssets : farms.slice(0, 4))
 
   const selectedReceiptInv = myInvestments.find(i => i.id === showReceiptModal)
   const selectedContractInv = myInvestments.find(i => i.id === showContractModal)
@@ -40,20 +43,32 @@ export default function ActivitiesPage() {
       <div className="animate-fade-in-up delay-100" style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <h2 className="section-title" style={{ marginBottom: 0 }}>My Assets ({displayAssets.length})</h2>
-          <Link href="/farms?filter=MY_ASSETS" style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>
-            View All →
-          </Link>
+          <button 
+            onClick={() => setShowAllMyAssets(!showAllMyAssets)}
+            style={{ 
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.75rem', 
+              color: 'var(--color-primary)', 
+              fontWeight: 600, 
+              textDecoration: 'none',
+              padding: 0
+            }}
+          >
+            {showAllMyAssets ? 'Show Less ↑' : 'View All →'}
+          </button>
         </div>
         {displayAssets.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--color-text-muted)' }}>
             <span style={{ fontSize: '3rem' }}>🌱</span>
             <p style={{ marginTop: '0.75rem', fontWeight: 600 }}>No registered assets yet</p>
-            <Link href="/cooperative" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-flex', textDecoration: 'none' }}>
+            <Link href="/create-farm" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-flex', textDecoration: 'none' }}>
               Register My Assets
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+          <div className="responsive-grid-4" style={{ gap: '1rem' }}>
             {displayAssets.map((farm, i) => {
               const progress = getFundingProgress(farm.currentFunding, farm.fundingGoal)
               return (
@@ -134,7 +149,7 @@ export default function ActivitiesPage() {
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+          <div className="responsive-grid-4" style={{ gap: '1rem' }}>
             {myInvestments.map((inv, i) => {
               const farm = inv.farm
               const roi = farm?.expectedReturn || 0

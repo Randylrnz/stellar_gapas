@@ -159,7 +159,7 @@ export default function DaoPage() {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div className="grid-responsive-2" style={{ gap: '0.75rem', marginBottom: '1rem' }}>
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>Proposal Type</label>
                 <select
@@ -188,7 +188,7 @@ export default function DaoPage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div className="grid-responsive-2" style={{ gap: '0.75rem', marginBottom: '1rem' }}>
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>Voting Duration (Days)</label>
                 <select

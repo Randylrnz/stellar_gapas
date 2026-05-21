@@ -9,7 +9,7 @@ import {
   Coins, ArrowRightLeft, PlusCircle, Landmark, Smartphone, Send
 } from 'lucide-react'
 import {
-  formatUSDC, formatPHP, shortenAddress, USDC_TO_PHP_RATE, XLM_TO_USDC_RATE
+  formatUSDC, formatPHP, shortenAddress, USDC_TO_PHP_RATE
 } from '@/lib/types'
 import { getAccountExplorerUrl } from '@/lib/stellar'
 
@@ -28,16 +28,10 @@ export default function WalletPage() {
   
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'usdc' | 'xlm' | 'php'>('usdc')
-  const [actionTab, setActionTab] = useState<'swap' | 'deposit' | 'withdraw'>('swap')
+  const [actionTab, setActionTab] = useState<'deposit' | 'withdraw'>('deposit')
 
-  // Swap State
-  const [swapFrom, setSwapFrom] = useState<'USDC' | 'XLM' | 'PHP'>('USDC')
-  const [swapTo, setSwapTo] = useState<'USDC' | 'XLM' | 'PHP'>('PHP')
-  const [swapAmount, setSwapAmount] = useState<string>('')
-  
   // Deposit State
-  const [depositMethod, setDepositMethod] = useState<'GCASH' | 'BANK' | 'XLM'>('GCASH')
+  const [depositMethod, setDepositMethod] = useState<'GCASH' | 'BANK'>('GCASH')
   const [depositAmount, setDepositAmount] = useState<string>('')
   const [depositLoading, setDepositLoading] = useState(false)
 
@@ -48,30 +42,6 @@ export default function WalletPage() {
   const [withdrawLoading, setWithdrawLoading] = useState(false)
 
   const did = user?.did || `did:stellar:GAPAS:${address || 'GAX_MOCK_USER_7F8E9D2C3B4A5'}`
-
-  // Swap Rate Calculations
-  const getSwapRate = () => {
-    if (swapFrom === 'USDC' && swapTo === 'PHP') return USDC_TO_PHP_RATE
-    if (swapFrom === 'PHP' && swapTo === 'USDC') return 1 / USDC_TO_PHP_RATE
-    if (swapFrom === 'XLM' && swapTo === 'USDC') return XLM_TO_USDC_RATE
-    if (swapFrom === 'USDC' && swapTo === 'XLM') return 1 / XLM_TO_USDC_RATE
-    if (swapFrom === 'XLM' && swapTo === 'PHP') return XLM_TO_USDC_RATE * USDC_TO_PHP_RATE
-    if (swapFrom === 'PHP' && swapTo === 'XLM') return 1 / (XLM_TO_USDC_RATE * USDC_TO_PHP_RATE)
-    return 1
-  }
-
-  const getEstimatedSwapOutput = () => {
-    const amt = parseFloat(swapAmount)
-    if (isNaN(amt) || amt <= 0) return 0
-    return amt * getSwapRate()
-  }
-
-  const handleSwapSourceChange = (src: 'USDC' | 'XLM' | 'PHP') => {
-    setSwapFrom(src)
-    if (src === 'USDC') setSwapTo('PHP')
-    else if (src === 'PHP') setSwapTo('USDC')
-    else if (src === 'XLM') setSwapTo('USDC')
-  }
 
   function copyAddress() {
     if (!address) return
@@ -89,65 +59,6 @@ export default function WalletPage() {
     showToast('Balances updated from Stellar ledger', 'success')
   }
 
-  const handleExecuteSwap = (e: React.FormEvent) => {
-    e.preventDefault()
-    const amt = parseFloat(swapAmount)
-    if (isNaN(amt) || amt <= 0) {
-      showToast('Enter a valid swap amount', 'error')
-      return
-    }
-
-    // Check balance
-    const sourceKey = swapFrom.toLowerCase() as 'usdc' | 'xlm' | 'php'
-    const targetKey = swapTo.toLowerCase() as 'usdc' | 'xlm' | 'php'
-    const currentSourceBalance = balances[sourceKey]
-
-    if (amt > currentSourceBalance) {
-      showToast(`Insufficient ${swapFrom} balance`, 'error')
-      return
-    }
-
-    const outputAmt = getEstimatedSwapOutput()
-
-    // Deduct source, add target
-    updateBalances({
-      [sourceKey]: currentSourceBalance - amt,
-      [targetKey]: balances[targetKey] + outputAmt
-    })
-
-    // Generate Transaction Hash & IDs
-    const txHash = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-    const txId = `SWAP-${Math.floor(10000 + Math.random() * 90000)}`
-
-    // Log Transaction in local list
-    addTransaction({
-      id: txId,
-      txHash,
-      type: 'REINVESTMENT',
-      amount: swapFrom === 'USDC' ? amt : (swapFrom === 'PHP' ? amt / USDC_TO_PHP_RATE : amt * XLM_TO_USDC_RATE),
-      memo: `Simulated swap: ${amt} ${swapFrom} ⇄ ${outputAmt.toFixed(2)} ${swapTo}`,
-      status: 'CONFIRMED',
-      createdAt: new Date().toISOString()
-    })
-
-    // Log W3C Receipt
-    addReceipt({
-      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
-      txHash,
-      type: 'SWAP',
-      fromDid: did,
-      toDid: did,
-      amountUsdc: swapFrom === 'USDC' ? amt : (swapFrom === 'PHP' ? amt / USDC_TO_PHP_RATE : amt * XLM_TO_USDC_RATE),
-      amountPhp: swapFrom === 'PHP' ? amt : (swapFrom === 'USDC' ? amt * USDC_TO_PHP_RATE : amt * XLM_TO_USDC_RATE * USDC_TO_PHP_RATE),
-      exchangeRate: getSwapRate(),
-      status: 'CONFIRMED',
-      createdAt: new Date().toISOString()
-    })
-
-    showToast(`Successfully swapped ${amt} ${swapFrom} to ${outputAmt.toFixed(2)} ${swapTo}!`, 'success')
-    setSwapAmount('')
-  }
-
   const handleExecuteDeposit = async (e: React.FormEvent) => {
     e.preventDefault()
     const amt = parseFloat(depositAmount)
@@ -160,12 +71,8 @@ export default function WalletPage() {
     await new Promise((r) => setTimeout(r, 1200))
     setDepositLoading(false)
 
-    // Deposit goes to PHP balance if GCash/Bank, or XLM if XLM
-    if (depositMethod === 'XLM') {
-      updateBalances({ xlm: balances.xlm + amt })
-    } else {
-      updateBalances({ php: balances.php + amt })
-    }
+    // Deposit goes to USDC balance directly
+    updateBalances({ usdc: balances.usdc + amt })
 
     const txHash = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
     
@@ -173,7 +80,7 @@ export default function WalletPage() {
       id: `DEP-${Math.floor(10000 + Math.random() * 90000)}`,
       txHash,
       type: 'RETURN',
-      amount: depositMethod === 'XLM' ? amt * XLM_TO_USDC_RATE : amt / USDC_TO_PHP_RATE,
+      amount: amt,
       memo: `Deposited via ${depositMethod}`,
       status: 'CONFIRMED',
       createdAt: new Date().toISOString()
@@ -185,14 +92,14 @@ export default function WalletPage() {
       type: 'TRANSFER',
       fromDid: `external:${depositMethod.toLowerCase()}`,
       toDid: did,
-      amountUsdc: depositMethod === 'XLM' ? amt * XLM_TO_USDC_RATE : amt / USDC_TO_PHP_RATE,
-      amountPhp: depositMethod === 'XLM' ? amt * XLM_TO_USDC_RATE * USDC_TO_PHP_RATE : amt,
-      exchangeRate: depositMethod === 'XLM' ? XLM_TO_USDC_RATE * USDC_TO_PHP_RATE : USDC_TO_PHP_RATE,
+      amountUsdc: amt,
+      amountPhp: amt * USDC_TO_PHP_RATE,
+      exchangeRate: USDC_TO_PHP_RATE,
       status: 'CONFIRMED',
       createdAt: new Date().toISOString()
     })
 
-    showToast(`Deposited ${amt} ${depositMethod === 'XLM' ? 'XLM' : 'PHP'} successfully!`, 'success')
+    showToast(`Deposited ${formatUSDC(amt)} USDC successfully!`, 'success')
     setDepositAmount('')
   }
 
@@ -209,11 +116,9 @@ export default function WalletPage() {
       return
     }
 
-    // Cashout is processed from PHP balance primarily (or equivalent USDC converted to PHP)
-    // Check if user has enough PHP, or enough USDC if they wish to offramp USDC.
-    // Let's check PHP balance first:
-    if (amt > balances.php) {
-      showToast('Insufficient PHP balance. Please swap your USDC to PHP first.', 'error')
+    // Cashout is processed from USDC balance directly
+    if (amt > balances.usdc) {
+      showToast('Insufficient USDC balance.', 'error')
       return
     }
 
@@ -221,7 +126,7 @@ export default function WalletPage() {
     await new Promise((r) => setTimeout(r, 1500))
     setWithdrawLoading(false)
 
-    updateBalances({ php: balances.php - amt })
+    updateBalances({ usdc: balances.usdc - amt })
 
     const txHash = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
 
@@ -229,7 +134,7 @@ export default function WalletPage() {
       id: `WTH-${Math.floor(10000 + Math.random() * 90000)}`,
       txHash,
       type: 'CASHOUT',
-      amount: amt / USDC_TO_PHP_RATE,
+      amount: amt,
       memo: `Cash-out to ${withdrawMethod} (${withdrawDestination})`,
       status: 'CONFIRMED',
       createdAt: new Date().toISOString()
@@ -241,14 +146,14 @@ export default function WalletPage() {
       type: 'WITHDRAWAL',
       fromDid: did,
       toDid: `external:${withdrawMethod.toLowerCase()}:${withdrawDestination}`,
-      amountUsdc: amt / USDC_TO_PHP_RATE,
-      amountPhp: amt,
+      amountUsdc: amt,
+      amountPhp: amt * USDC_TO_PHP_RATE,
       exchangeRate: USDC_TO_PHP_RATE,
       status: 'CONFIRMED',
       createdAt: new Date().toISOString()
     })
 
-    showToast(`Withdrew ${formatPHP(amt)} to your ${withdrawMethod} wallet!`, 'success')
+    showToast(`Withdrew ${formatUSDC(amt)} USDC (≈ ${formatPHP(amt * USDC_TO_PHP_RATE)}) to your ${withdrawMethod} wallet!`, 'success')
     setWithdrawAmount('')
     setWithdrawDestination('')
   }
@@ -260,7 +165,7 @@ export default function WalletPage() {
         <p className="page-subtitle">Interactive On-Chain Settlement Hub</p>
       </div>
 
-      {/* Multi-Asset Balances Carousel Panel */}
+      {/* Premium Unified USDC Balance Panel */}
       <div className="animate-fade-in-up delay-100" style={{ marginBottom: '1.5rem' }}>
         <div style={{
           background: 'var(--gradient-hero)',
@@ -278,66 +183,34 @@ export default function WalletPage() {
             borderRadius: '50%',
           }} />
 
-          {/* Tab Selector inside the card */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', position: 'relative', zIndex: 1 }}>
-            {[
-              { id: 'usdc', label: '🟢 USDC Token', balance: balances.usdc, suffix: 'USDC' },
-              { id: 'xlm', label: '⭐ XLM Native', balance: balances.xlm, suffix: 'XLM' },
-              { id: 'php', label: '₱ PHP Fiat', balance: balances.php, suffix: 'PHP' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                style={{
-                  flex: 1,
-                  background: activeTab === tab.id ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.07)',
-                  border: activeTab === tab.id ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(255,255,255,0.05)',
-                  padding: '0.4rem 0.5rem',
-                  borderRadius: 'var(--radius-md)',
-                  color: '#fff',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  backdropFilter: 'blur(5px)'
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <p style={{ fontSize: '0.75rem', opacity: 0.7, marginBottom: '0.2rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {activeTab === 'usdc' ? 'USDC Liquidity' : activeTab === 'xlm' ? 'Native Gas reserve' : 'Settled Cash PHP'} Balance
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
-              <p style={{ fontSize: '2.25rem', fontWeight: 900, fontFamily: 'var(--font-jakarta)', lineHeight: 1 }}>
-                {activeTab === 'usdc' && formatUSDC(balances.usdc)}
-                {activeTab === 'xlm' && balances.xlm.toFixed(4)}
-                {activeTab === 'php' && formatPHP(balances.php)}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <p style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#22c55e' }} />
+                Stellar USDC Token Balance
               </p>
-              {activeTab !== 'php' && (
-                <span style={{ fontSize: '0.9rem', opacity: 0.8, fontWeight: 700, alignSelf: 'flex-end', paddingBottom: '0.2rem' }}>
-                  {activeTab.toUpperCase()}
-                </span>
-              )}
               <button
                 onClick={refreshBalance}
                 disabled={loading}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', padding: '0.25rem', marginLeft: 'auto', alignSelf: 'flex-end' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', padding: '0.25rem' }}
                 aria-label="Refresh balances"
               >
                 <RefreshCw size={16} className={loading ? 'spinner' : ''} />
               </button>
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.3rem' }}>
+              <p style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-jakarta)', lineHeight: 1 }}>
+                {formatUSDC(balances.usdc)}
+              </p>
+              <span style={{ fontSize: '1rem', opacity: 0.9, fontWeight: 800 }}>
+                USDC
+              </span>
+            </div>
+
             {/* Sub-indicative Rate */}
-            <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '1.25rem' }}>
-              {activeTab === 'usdc' && `≈ ${formatPHP(balances.usdc * USDC_TO_PHP_RATE)}`}
-              {activeTab === 'xlm' && `≈ ${formatUSDC(balances.xlm * XLM_TO_USDC_RATE)} USDC (${formatPHP(balances.xlm * XLM_TO_USDC_RATE * USDC_TO_PHP_RATE)})`}
-              {activeTab === 'php' && `≈ ${formatUSDC(balances.php / USDC_TO_PHP_RATE)} USDC`}
+            <p style={{ fontSize: '0.9rem', opacity: 0.85, fontWeight: 600, marginBottom: '1.5rem' }}>
+              ≈ {formatPHP(balances.usdc * USDC_TO_PHP_RATE)} PHP
             </p>
 
             {/* Address Row */}
@@ -378,7 +251,6 @@ export default function WalletPage() {
       <div className="gapas-card animate-fade-in-up delay-150" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', marginBottom: '1.25rem' }}>
           {[
-            { id: 'swap', label: 'Quick Swap', icon: ArrowRightLeft },
             { id: 'deposit', label: 'Add Funds', icon: PlusCircle },
             { id: 'withdraw', label: 'Off-Ramp Cash', icon: ArrowUpRight }
           ].map((tab) => {
@@ -396,7 +268,7 @@ export default function WalletPage() {
                   padding: '0.75rem 0.5rem',
                   color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
                   fontWeight: 700,
-                  fontSize: '0.8rem',
+                  fontSize: '0.85rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -412,125 +284,15 @@ export default function WalletPage() {
           })}
         </div>
 
-        {/* 1. SWAP ENGINE */}
-        {actionTab === 'swap' && (
-          <form onSubmit={handleExecuteSwap} className="animate-fade-in">
-            <div style={{ marginBottom: '1rem', position: 'relative' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>From Asset</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <select
-                  value={swapFrom}
-                  onChange={(e) => handleSwapSourceChange(e.target.value as any)}
-                  className="form-input"
-                  style={{ width: '35%', fontWeight: 700, color: 'var(--color-primary-dark)' }}
-                >
-                  <option value="USDC">USDC</option>
-                  <option value="XLM">XLM</option>
-                  <option value="PHP">PHP</option>
-                </select>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  step="any"
-                  value={swapAmount}
-                  onChange={(e) => setSwapAmount(e.target.value)}
-                  className="form-input"
-                  style={{ flex: 1 }}
-                />
-              </div>
-              <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', position: 'absolute', right: '0.5rem', bottom: '-1.15rem' }}>
-                Balance: {balances[swapFrom.toLowerCase() as 'usdc' | 'xlm' | 'php'].toFixed(2)} {swapFrom}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'center', margin: '1rem 0' }}>
-              <div style={{
-                width: 32, height: 32,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(27,67,50,0.1)',
-                color: 'var(--color-primary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 800, fontSize: '0.9rem'
-              }}>
-                ↓
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>To Asset</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <select
-                  value={swapTo}
-                  onChange={(e) => setSwapTo(e.target.value as any)}
-                  className="form-input"
-                  style={{ width: '35%', fontWeight: 700, color: 'var(--color-primary-dark)' }}
-                >
-                  {swapFrom === 'USDC' && (
-                    <>
-                      <option value="PHP">PHP</option>
-                      <option value="XLM">XLM</option>
-                    </>
-                  )}
-                  {swapFrom === 'PHP' && (
-                    <>
-                      <option value="USDC">USDC</option>
-                      <option value="XLM">XLM</option>
-                    </>
-                  )}
-                  {swapFrom === 'XLM' && (
-                    <>
-                      <option value="USDC">USDC</option>
-                      <option value="PHP">PHP</option>
-                    </>
-                  )}
-                </select>
-                <input
-                  type="text"
-                  readOnly
-                  placeholder="0.00"
-                  value={getEstimatedSwapOutput() > 0 ? getEstimatedSwapOutput().toFixed(2) : ''}
-                  className="form-input"
-                  style={{ flex: 1, backgroundColor: 'var(--color-surface)', opacity: 0.9 }}
-                />
-              </div>
-            </div>
-
-            {/* Rate Preview Indicator */}
-            <div style={{
-              background: 'var(--color-surface)',
-              borderRadius: 'var(--radius-md)',
-              padding: '0.75rem',
-              fontSize: '0.75rem',
-              color: 'var(--color-text-secondary)',
-              border: '1px dashed var(--color-border)',
-              marginBottom: '1rem',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span>Conversion Rate:</span>
-              <strong style={{ color: 'var(--color-primary-dark)' }}>
-                1 {swapFrom} = {getSwapRate().toFixed(4)} {swapTo}
-              </strong>
-            </div>
-
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
-              <Coins size={16} />
-              Confirm Stellar Swap
-            </button>
-          </form>
-        )}
-
-        {/* 2. DEPOSIT / ADD FUNDS */}
+        {/* 1. DEPOSIT / ADD FUNDS */}
         {actionTab === 'deposit' && (
           <form onSubmit={handleExecuteDeposit} className="animate-fade-in">
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.5rem' }}>Deposit Method</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+              <div className="grid-responsive-2" style={{ gap: '0.5rem' }}>
                 {[
                   { id: 'GCASH', label: 'GCash', icon: Smartphone },
-                  { id: 'BANK', label: 'Bank (BPI)', icon: Landmark },
-                  { id: 'XLM', label: 'XLM Feed', icon: Send }
+                  { id: 'BANK', label: 'Bank (BPI)', icon: Landmark }
                 ].map((item) => {
                   const Icon = item.icon
                   const active = depositMethod === item.id
@@ -565,18 +327,18 @@ export default function WalletPage() {
 
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>
-                Amount to Deposit ({depositMethod === 'XLM' ? 'XLM' : 'PHP'})
+                Amount to Deposit (USDC)
               </label>
               <input
                 type="number"
-                placeholder={depositMethod === 'XLM' ? 'e.g. 100' : 'e.g. 5000'}
+                placeholder="e.g. 100"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 className="form-input"
                 required
               />
               <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'block', marginTop: '0.25rem' }}>
-                {depositAmount && `≈ $${(depositMethod === 'XLM' ? parseFloat(depositAmount) * XLM_TO_USDC_RATE : parseFloat(depositAmount) / USDC_TO_PHP_RATE).toFixed(2)} USDC on Stellar`}
+                {depositAmount && `≈ ₱${(parseFloat(depositAmount) * USDC_TO_PHP_RATE).toFixed(2)} PHP cost via ${depositMethod}`}
               </span>
             </div>
 
@@ -596,12 +358,12 @@ export default function WalletPage() {
           </form>
         )}
 
-        {/* 3. OFF-RAMP CASH OUT */}
+        {/* 2. OFF-RAMP CASH OUT */}
         {actionTab === 'withdraw' && (
           <form onSubmit={handleExecuteWithdrawal} className="animate-fade-in">
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.5rem' }}>Off-Ramp Provider</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+              <div className="grid-responsive-2" style={{ gap: '0.5rem' }}>
                 {[
                   { id: 'GCASH', label: 'GCash / PayMaya', icon: Smartphone },
                   { id: 'BANK', label: 'Local Bank (BDO)', icon: Landmark }
@@ -639,18 +401,19 @@ export default function WalletPage() {
 
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>
-                Amount to Cash Out (PHP)
+                Amount to Cash Out (USDC)
               </label>
               <input
                 type="number"
-                placeholder="PHP amount to withdraw"
+                placeholder="e.g. 50"
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
                 className="form-input"
                 required
               />
               <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'block', marginTop: '0.25rem' }}>
-                Balance available: <strong>{formatPHP(balances.php)}</strong> (Swap your USDC/XLM if needed)
+                Balance available: <strong>{formatUSDC(balances.usdc)} USDC</strong>
+                {withdrawAmount && ` (You will receive ≈ ₱${(parseFloat(withdrawAmount) * USDC_TO_PHP_RATE).toFixed(2)} PHP)`}
               </span>
             </div>
 

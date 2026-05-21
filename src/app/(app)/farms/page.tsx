@@ -57,7 +57,7 @@ export default function FarmsPage() {
           <p className="page-subtitle">Mag-invest sa verified Philippine farm assets</p>
         </div>
         <Link
-          href="/cooperative"
+          href="/create-farm"
           className="btn btn-primary"
           style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', fontSize: '0.8rem', textDecoration: 'none', flexShrink: 0 }}
           id="palengke-register-assets-btn"
@@ -148,13 +148,13 @@ export default function FarmsPage() {
               : 'Try a different search or filter'}
           </p>
           {filterCategory === 'MY_ASSETS' && (
-            <Link href="/cooperative" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-flex', textDecoration: 'none' }}>
+            <Link href="/create-farm" className="btn btn-primary" style={{ marginTop: '1rem', display: 'inline-flex', textDecoration: 'none' }}>
               Register My Assets
             </Link>
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+        <div className="responsive-grid-4">
           {filtered.map((farm, i) => (
             <div key={farm.id} style={{ animationDelay: `${i * 80}ms`, display: 'flex' }}>
               <div style={{ width: '100%' }}>

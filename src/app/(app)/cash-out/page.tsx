@@ -85,13 +85,7 @@ export default function CashOutPage() {
   return (
     <div className="page-with-nav">
       {/* Header */}
-      <div style={{
-        position: 'sticky', top: 0,
-        background: 'var(--color-surface)', zIndex: 50,
-        padding: '0.875rem 1rem',
-        display: 'flex', alignItems: 'center', gap: '0.75rem',
-        borderBottom: '1px solid var(--color-border)',
-      }}>
+      <div className="sticky-back-header">
         <Link href="/wallet" style={{ color: 'var(--color-text)', display: 'flex' }}>
           <ArrowLeft size={22} />
         </Link>
@@ -131,7 +125,7 @@ export default function CashOutPage() {
           {/* Method selection */}
           <div className="animate-fade-in-up delay-150" style={{ marginBottom: '1.25rem' }}>
             <p className="form-label" style={{ marginBottom: '0.75rem' }}>Cash Out Method</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
+            <div className="grid-responsive-2" style={{ gap: '0.625rem' }}>
               {METHODS.map(({ id, label, emoji, desc }) => (
                 <button
                   key={id}

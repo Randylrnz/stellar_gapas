@@ -123,11 +123,7 @@ export default function FarmCard({ farm, compact = false }: FarmCardProps) {
         </div>
 
         {/* Stats row */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '0.5rem',
-        }}>
+        <div className="grid-responsive-2" style={{ gap: '0.5rem' }}>
           <div style={{
             background: 'var(--color-surface)',
             borderRadius: 'var(--radius-md)',

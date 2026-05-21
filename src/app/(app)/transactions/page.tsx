@@ -30,13 +30,7 @@ export default function TransactionsPage() {
   return (
     <div className="page-with-nav">
       {/* Header */}
-      <div style={{
-        position: 'sticky', top: 0,
-        background: 'var(--color-surface)', zIndex: 50,
-        padding: '0.875rem 1rem',
-        display: 'flex', alignItems: 'center', gap: '0.75rem',
-        borderBottom: '1px solid var(--color-border)',
-      }}>
+      <div className="sticky-back-header">
         <Link href="/wallet" style={{ color: 'var(--color-text)', display: 'flex' }}>
           <ArrowLeft size={22} />
         </Link>

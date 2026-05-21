@@ -183,13 +183,7 @@ export default function CreateFarmPage() {
   return (
     <div className="page-with-nav">
       {/* Header */}
-      <div style={{
-        position: 'sticky', top: 0,
-        background: 'var(--color-surface)',
-        zIndex: 50, padding: '0.875rem 1rem',
-        display: 'flex', alignItems: 'center', gap: '0.75rem',
-        borderBottom: '1px solid var(--color-border)',
-      }}>
+      <div className="sticky-back-header">
         <Link href="/farms" style={{ color: 'var(--color-text)', display: 'flex' }}>
           <ArrowLeft size={22} />
         </Link>
@@ -271,18 +265,25 @@ export default function CreateFarmPage() {
                 <label className="form-label" htmlFor={assetType === 'CROP' ? 'crop-type' : 'livestock-type'}>
                   {assetType === 'CROP' ? 'Crop Type *' : 'Livestock Type *'}
                 </label>
-                <select
+                <input
                   id={assetType === 'CROP' ? 'crop-type' : 'livestock-type'}
-                  className="form-select"
+                  list={assetType === 'CROP' ? 'crop-options' : 'livestock-options'}
+                  className="form-input"
+                  placeholder={assetType === 'CROP' ? 'Type or select crop type...' : 'Type or select livestock type...'}
                   value={assetType === 'CROP' ? form.cropType : form.livestockType}
                   onChange={e => handleChange(assetType === 'CROP' ? 'cropType' : 'livestockType', e.target.value)}
                   required
-                >
-                  <option value="">Select {assetType === 'CROP' ? 'crop' : 'livestock'} type...</option>
-                  {(assetType === 'CROP' ? CROP_TYPES : LIVESTOCK_TYPES).map(t => (
-                    <option key={t} value={t}>{t}</option>
+                />
+                <datalist id="crop-options">
+                  {CROP_TYPES.map(t => (
+                    <option key={t} value={t} />
                   ))}
-                </select>
+                </datalist>
+                <datalist id="livestock-options">
+                  {LIVESTOCK_TYPES.map(t => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
               </div>
             )}
 
@@ -303,7 +304,7 @@ export default function CreateFarmPage() {
                     required
                   />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="grid-responsive-2" style={{ gap: '0.75rem' }}>
                   <div className="form-group">
                     <label className="form-label" htmlFor="eq-purchased">Purchased Date</label>
                     <input
@@ -446,7 +447,7 @@ export default function CreateFarmPage() {
                 </div>
 
                 {/* Coordinates & Location feedback box */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: '0.75rem' }}>
+                <div className="grid-responsive-1-5-1-1" style={{ gap: '0.75rem' }}>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label" style={{ fontSize: '0.65rem', marginBottom: '0.2rem' }}>Resolved Location</label>
                     <input type="text" className="form-input" style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem', background: 'var(--color-surface-2)' }} value={form.location} readOnly />
@@ -487,7 +488,7 @@ export default function CreateFarmPage() {
           </div>
 
           <div className="animate-fade-in-up delay-150">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="grid-responsive-2" style={{ gap: '0.75rem' }}>
               <div className="form-group">
                 <label className="form-label" htmlFor="funding-goal">Funding Goal (USDC) *</label>
                 <input
@@ -516,7 +517,7 @@ export default function CreateFarmPage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="grid-responsive-2" style={{ gap: '0.75rem' }}>
               <div className="form-group">
                 <label className="form-label" htmlFor="farm-duration">Duration (Days)</label>
                 <select

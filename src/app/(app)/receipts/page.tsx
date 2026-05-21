@@ -174,7 +174,7 @@ export default function ReceiptsPage() {
                       fontSize: '0.75rem',
                       color: 'var(--color-text-secondary)'
                     }} className="animate-fade-in">
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <div className="grid-responsive-2" style={{ gap: '0.75rem', marginBottom: '0.75rem' }}>
                         <div>
                           <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>From DID</span>
                           <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', wordBreak: 'break-all', color: 'var(--color-text-secondary)' }}>
@@ -189,7 +189,7 @@ export default function ReceiptsPage() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <div className="grid-responsive-2" style={{ gap: '0.75rem', marginBottom: '0.75rem' }}>
                         <div>
                           <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>Ledger Transaction Hash</span>
                           <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', wordBreak: 'break-all', color: 'var(--color-text-secondary)' }}>
@@ -204,7 +204,7 @@ export default function ReceiptsPage() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <div className="grid-responsive-2" style={{ gap: '0.75rem', marginBottom: '0.75rem' }}>
                         <div>
                           <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>Settlement Exchange Rate</span>
                           <span>1 USDC = ₱{rcpt.exchangeRate.toFixed(2)} PHP</span>

@@ -303,7 +303,7 @@ export default function LandingPage() {
           }}>
             Built for Trust
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+          <div className="grid-responsive-2" style={{ gap: '0.875rem' }}>
             {[
               { icon: Shield, title: 'Soroban Escrow', desc: 'Smart contracts hold funds. No manual withdrawals.', color: '#1B4332', bg: 'rgba(27,67,50,0.08)' },
               { icon: TrendingUp, title: 'Auto Payouts', desc: 'Profit distributed automatically after harvest.', color: '#2563eb', bg: 'rgba(59,130,246,0.08)' },

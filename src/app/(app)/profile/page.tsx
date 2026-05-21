@@ -130,7 +130,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Credit Score Dial & DID info */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1.25rem', marginBottom: '1.5rem' }} className="animate-fade-in-up delay-100">
+      <div className="grid-responsive-split animate-fade-in-up delay-100" style={{ marginBottom: '1.5rem' }}>
         {/* Credit Score Radial Dial */}
         <div className="gapas-card" style={{
           padding: '1.25rem',
@@ -241,7 +241,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Stats row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid var(--color-border)', paddingTop: '0.5rem' }}>
+            <div className="grid-responsive-3" style={{ gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid var(--color-border)', paddingTop: '0.5rem' }}>
               <div>
                 <span style={{ fontSize: '0.6rem', color: 'var(--color-text-muted)', display: 'block', textTransform: 'uppercase' }}>Assets</span>
                 <strong style={{ fontSize: '0.9rem', color: 'var(--color-text)' }}>3 Registered</strong>
@@ -265,7 +265,7 @@ export default function ProfilePage() {
       {/* Compliance Verifiable Credentials Grid */}
       <div className="animate-fade-in-up delay-200" style={{ marginBottom: '1.5rem' }}>
         <h2 className="section-title">W3C Verifiable Credentials Desk</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+        <div className="grid-responsive-2" style={{ gap: '0.75rem' }}>
           {credentials.map((cred) => {
             const isVerified = cred.status === 'VERIFIED'
             const isReview = cred.status === 'UNDER_REVIEW'

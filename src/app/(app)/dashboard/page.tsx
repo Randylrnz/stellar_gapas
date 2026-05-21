@@ -193,7 +193,7 @@ export default function DashboardPage() {
               Stellar Address: {address ? shortenAddress(address) : 'Connecting...'}
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="grid-responsive-2" style={{ gap: '0.75rem' }}>
               <div style={{
                 background: 'rgba(255,255,255,0.1)',
                 borderRadius: 'var(--radius-md)',
@@ -229,7 +229,7 @@ export default function DashboardPage() {
         {/* Quick Actions */}
         <div className="animate-fade-in-up delay-100" style={{ marginBottom: '1.5rem' }}>
           <h2 className="section-title">Quick Actions</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+          <div className="responsive-grid-actions">
             {[
               { href: '/farms', icon: Sprout, label: 'Palengke', color: '#1B4332', bg: 'rgba(27,67,50,0.1)' },
               { href: '/portfolio', icon: TrendingUp, label: 'My Activities', color: '#2d6a4f', bg: 'rgba(45,106,79,0.1)' },
@@ -333,7 +333,7 @@ export default function DashboardPage() {
               DID: did:stellar:GAPAS:GC3DRQQ...AB74MX
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="grid-responsive-2" style={{ gap: '0.75rem' }}>
               <div style={{
                 background: 'rgba(255,255,255,0.1)',
                 borderRadius: 'var(--radius-md)',
@@ -369,7 +369,7 @@ export default function DashboardPage() {
         {/* Farmer Quick Actions */}
         <div className="animate-fade-in-up delay-100" style={{ marginBottom: '1.5rem' }}>
           <h2 className="section-title">Farmer Quick Actions</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+          <div className="responsive-grid-actions">
             <button
               onClick={handleCoopHelpDeskClick}
               style={{
@@ -403,7 +403,7 @@ export default function DashboardPage() {
             </button>
 
             <Link
-              href="/cooperative"
+              href="/create-farm"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -530,7 +530,7 @@ export default function DashboardPage() {
               <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
                 Displaying localized weather for <strong>Barangay {farmBarangay}</strong> — coordinates <strong>{farmCoordinates?.lat?.toFixed(4)} N, {farmCoordinates?.lng?.toFixed(4)} E</strong>.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+              <div className="grid-responsive-3" style={{ gap: '0.5rem' }}>
                 <div style={{ padding: '0.6rem 0.4rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', background: 'rgba(34,197,94,0.05)' }}>
                   <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', fontWeight: 600, display: 'block' }}>Brgy. {farmBarangay}</span>
                   <span className="badge badge-success" style={{ fontSize: '0.6rem', marginTop: '0.2rem' }}>LOW RISK</span>
@@ -705,7 +705,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                    <div className="grid-responsive-2" style={{ gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                       <div>
                         <strong>Asset Type:</strong> {farm.assetType || 'Crop'}
                       </div>
@@ -798,7 +798,7 @@ export default function DashboardPage() {
               Assisting 200+ barangay growers on Stellar Mainnet.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="grid-responsive-2" style={{ gap: '0.75rem' }}>
               <div style={{
                 background: 'rgba(255,255,255,0.1)',
                 borderRadius: 'var(--radius-md)',
@@ -834,7 +834,7 @@ export default function DashboardPage() {
         {/* Cooperative Quick Actions */}
         <div className="animate-fade-in-up delay-100" style={{ marginBottom: '1.5rem' }}>
           <h2 className="section-title">Cooperative Quick Actions</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+          <div className="responsive-grid-actions" style={{ gap: '0.75rem' }}>
             {[
               { href: '/cooperative', icon: ClipboardList, label: 'Tickets Desk', color: '#1B4332', bg: 'rgba(27,67,50,0.1)' },
               { href: '/wallet', icon: Wallet, label: 'Coop Wallet', color: '#f9ad00', bg: 'rgba(249,173,0,0.12)' },
@@ -885,7 +885,7 @@ export default function DashboardPage() {
         {/* Cooperative Desk Overview Stats */}
         <div className="gapas-card animate-fade-in-up delay-150" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
           <h2 className="section-title">Assisted Registry Performance</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', textAlign: 'center' }}>
+          <div className="grid-responsive-3" style={{ gap: '0.75rem', textAlign: 'center' }}>
             <div style={{ padding: '0.5rem', borderRight: '1px solid var(--color-border)' }}>
               <p style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Assisted Assets</p>
               <p style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-primary)' }}>{coopAssistedFarms.length}</p>

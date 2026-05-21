@@ -289,7 +289,7 @@ export default function CooperativePortalPage() {
     return (
       <div className="animate-fade-in-up">
         {/* Interactive Stats Ribbon */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <div className="responsive-grid-3" style={{ marginBottom: '1.5rem' }}>
           <div className="gapas-card text-center" style={{ padding: '0.875rem' }}>
             <ClipboardList size={18} color="var(--color-warning)" style={{ margin: '0 auto 0.25rem' }} />
             <p style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>In Queue</p>
@@ -343,7 +343,7 @@ export default function CooperativePortalPage() {
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: selectedTicket ? '1.2fr 1fr' : '1fr', gap: '1.5rem', alignItems: 'flex-start' }}>
+        <div className={`coop-ticketing-layout${selectedTicket ? ' has-selected' : ''}`}>
           {/* LEFT: Tickets List */}
           <div>
             <h3 className="section-title">
@@ -463,7 +463,7 @@ export default function CooperativePortalPage() {
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <div className="grid-responsive-2" style={{ gap: '0.5rem' }}>
                     <div>
                       <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Funding Goal (USDC)</label>
                       <input
@@ -501,7 +501,7 @@ export default function CooperativePortalPage() {
                   {/* 1. Crop fields */}
                   {assetType === 'CROP' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.75rem', background: 'rgba(27,67,50,0.03)', borderRadius: 'var(--radius-md)' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div className="grid-responsive-2" style={{ gap: '0.5rem' }}>
                         <div>
                           <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Crop Type</label>
                           <input
@@ -534,7 +534,7 @@ export default function CooperativePortalPage() {
 
                   {/* 2. Livestock fields */}
                   {assetType === 'LIVESTOCK' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.5rem', padding: '0.75rem', background: 'rgba(27,67,50,0.03)', borderRadius: 'var(--radius-md)' }}>
+                    <div className="grid-responsive-1-2-1" style={{ gap: '0.5rem', padding: '0.75rem', background: 'rgba(27,67,50,0.03)', borderRadius: 'var(--radius-md)' }}>
                       <div>
                         <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Livestock Breed</label>
                         <input
@@ -572,7 +572,7 @@ export default function CooperativePortalPage() {
                   {/* 3. Equipment fields */}
                   {assetType === 'EQUIPMENT' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', background: 'rgba(27,67,50,0.03)', borderRadius: 'var(--radius-md)' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.5rem' }}>
+                      <div className="grid-responsive-1-2" style={{ gap: '0.5rem' }}>
                         <div>
                           <label style={{ fontSize: '0.65rem', fontWeight: 700, display: 'block' }}>Model/Make</label>
                           <input
@@ -598,7 +598,7 @@ export default function CooperativePortalPage() {
                           </select>
                         </div>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div className="grid-responsive-2" style={{ gap: '0.5rem' }}>
                         <div>
                           <label style={{ fontSize: '0.65rem', fontWeight: 700, display: 'block' }}>Purchased Date</label>
                           <input
@@ -623,7 +623,7 @@ export default function CooperativePortalPage() {
 
                   {/* 4. Carbon fields */}
                   {assetType === 'CARBON' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.5rem', padding: '0.75rem', background: 'rgba(27,67,50,0.03)', borderRadius: 'var(--radius-md)' }}>
+                    <div className="grid-responsive-1-2" style={{ gap: '0.5rem', padding: '0.75rem', background: 'rgba(27,67,50,0.03)', borderRadius: 'var(--radius-md)' }}>
                       <div>
                         <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Carbon Offsetting Credits</label>
                         <input

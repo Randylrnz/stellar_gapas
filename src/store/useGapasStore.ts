@@ -10,7 +10,7 @@ interface WalletState {
   network: string
   user: User | null
   activeRole: 'INVESTOR' | 'FARMER' | 'COOPERATIVE'
-  balances: { usdc: number; xlm: number; php: number }
+  balances: { usdc: number }
 }
 
 interface UIState {
@@ -37,7 +37,7 @@ interface GapasStore extends WalletState, UIState, DataState {
   setConnecting: (val: boolean) => void
   setUser: (user: User | null) => void
   switchRole: (role: 'INVESTOR' | 'FARMER' | 'COOPERATIVE') => void
-  updateBalances: (updates: Partial<{ usdc: number; xlm: number; php: number }>) => void
+  updateBalances: (updates: Partial<{ usdc: number }>) => void
 
   // UI actions
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void
@@ -198,7 +198,7 @@ export const useGapasStore = create<GapasStore>()(
       network: 'testnet',
       user: null,
       activeRole: 'INVESTOR',
-      balances: { usdc: 2450.75, xlm: 500.0, php: 0.0 },
+      balances: { usdc: 2450.75 },
 
       // UI initial state
       toast: null,
@@ -250,7 +250,7 @@ export const useGapasStore = create<GapasStore>()(
           isConnected: false,
           user: null,
           activeRole: 'INVESTOR',
-          balances: { usdc: 0, xlm: 0, php: 0 },
+          balances: { usdc: 0 },
           myInvestments: [],
           myTransactions: [],
           portfolioTotal: 0,
