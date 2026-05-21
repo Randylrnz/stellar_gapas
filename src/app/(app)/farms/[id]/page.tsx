@@ -85,7 +85,7 @@ export default function FarmDetailPage({
         memo: `Fund: ${farm.name}`,
       })
 
-      if (result.success && result.txHash) {
+      if (result.success) {
         setTxHash(result.txHash)
         addInvestment({
           id: `inv-${Date.now()}`,

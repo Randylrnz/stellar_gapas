@@ -28,6 +28,8 @@ interface DataState {
   tickets: Ticket[]
   proposals: Proposal[]
   receipts: Receipt[]
+  processedEventIds: string[]
+  isSyncing: boolean
 }
 
 interface GapasStore extends WalletState, UIState, DataState {
@@ -82,7 +84,13 @@ interface GapasStore extends WalletState, UIState, DataState {
   setFarmCoordinates: (coords: { lat: number; lng: number } | null) => void
   disasterEvents: any[]
   addDisasterEvent: (event: any) => void
-}
+
+      // Blockchain Ingestion & Simulation
+      ingestContractEvents: (contractAddress: string) => Promise<void>
+      simulateIncomingBlockchainEvent: (eventType: 'investment' | 'vote' | 'payout') => void
+      clearProcessedEvents: () => void
+      deploySmartContract: (deployerAddress: string) => Promise<{ success: boolean; contractId?: string; txHash?: string; error?: string }>
+    }
 
 const INITIAL_CREDENTIALS: Credential[] = [
   { name: 'Land Ownership Certificate', issuer: 'DENR', status: 'VERIFIED', reviewer: 'System — cross-checked via DENR public registry API', issuedVc: 'vc:stellar:GAPAS:land_ownership:denr99f0' },
@@ -96,7 +104,7 @@ const INITIAL_CREDENTIALS: Credential[] = [
 const INITIAL_TICKETS: Ticket[] = [
   {
     id: 'TKT-2026-00411',
-    farmerId: 'GAX_MOCK_USER_7F8E9D2C3B4A5',
+    farmerId: 'GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD',
     farmerName: 'Demo User (Farmer)',
     cooperativeId: 'coop-1',
     status: 'PENDING',
@@ -104,7 +112,7 @@ const INITIAL_TICKETS: Ticket[] = [
   },
   {
     id: 'TKT-2026-00912',
-    farmerId: 'GAX_MOCK_USER_7F8E9D2C3B4A5',
+    farmerId: 'GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD',
     farmerName: 'Demo User (Farmer)',
     cooperativeId: 'coop-1',
     status: 'COMPLETED',
@@ -151,7 +159,7 @@ const INITIAL_RECEIPTS: Receipt[] = [
     id: 'TXN-00041',
     txHash: 'abc123def456abc123def456abc123def456abc123def456abc123def456abc1',
     type: 'INVESTMENT',
-    fromDid: 'did:stellar:GAPAS:GAX_MOCK_USER_7F8E9D2C3B4A5',
+    fromDid: 'did:stellar:GAPAS:GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD',
     toDid: 'did:stellar:GAPAS:GFARMER1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
     amountUsdc: 500,
     amountPhp: 28715,
@@ -164,7 +172,7 @@ const INITIAL_RECEIPTS: Receipt[] = [
     id: 'TXN-00042',
     txHash: 'def789ghi012def789ghi012def789ghi012def789ghi012def789ghi012def7',
     type: 'INVESTMENT',
-    fromDid: 'did:stellar:GAPAS:GAX_MOCK_USER_7F8E9D2C3B4A5',
+    fromDid: 'did:stellar:GAPAS:GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD',
     toDid: 'did:stellar:GAPAS:GFARMER2BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
     amountUsdc: 1000,
     amountPhp: 57430,
@@ -178,7 +186,7 @@ const INITIAL_RECEIPTS: Receipt[] = [
     txHash: 'ghi345jkl678ghi345jkl678ghi345jkl678ghi345jkl678ghi345jkl678ghi3',
     type: 'PAYOUT',
     fromDid: 'did:stellar:GAPAS:GFARMER4DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD',
-    toDid: 'did:stellar:GAPAS:GAX_MOCK_USER_7F8E9D2C3B4A5',
+    toDid: 'did:stellar:GAPAS:GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD',
     amountUsdc: 1012.5,
     amountPhp: 58147.88,
     exchangeRate: 57.43,
@@ -190,7 +198,7 @@ const INITIAL_RECEIPTS: Receipt[] = [
 
 export const useGapasStore = create<GapasStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Wallet initial state
       address: null,
       isConnected: false,
@@ -214,6 +222,8 @@ export const useGapasStore = create<GapasStore>()(
       tickets: INITIAL_TICKETS,
       proposals: INITIAL_PROPOSALS,
       receipts: INITIAL_RECEIPTS,
+      processedEventIds: [],
+      isSyncing: false,
 
       // Weather & coordinates state
       gmapsApiKey: '',
@@ -401,6 +411,256 @@ export const useGapasStore = create<GapasStore>()(
       setFarmBarangay: (farmBarangay) => set({ farmBarangay }),
       setFarmCoordinates: (farmCoordinates) => set({ farmCoordinates }),
       addDisasterEvent: (event) => set((state) => ({ disasterEvents: [event, ...state.disasterEvents] })),
+
+      // Blockchain Ingestion & Simulation Actions
+      ingestContractEvents: async (contractAddress) => {
+        const { isSyncing, processedEventIds, showToast } = useGapasStore.getState() as any
+        if (isSyncing) return
+        set({ isSyncing: true })
+
+        try {
+          const { fetchContractEvents, parseSorobanEvent } = await import('@/lib/stellar')
+          const latestLedger = 200000 // In mock / testnet event retrieval
+          
+          const rawEvents = await fetchContractEvents({
+            contractAddress,
+            startLedger: latestLedger - 1000,
+            limit: 50,
+          })
+
+          let newEventsCount = 0
+
+          for (const rawEv of rawEvents) {
+            if (processedEventIds.includes(rawEv.id)) continue
+
+            const parsed = await parseSorobanEvent(rawEv)
+            const topic1 = parsed.topics[0]
+
+            if (topic1 === 'transfer' || topic1 === 'investment') {
+              const investor = parsed.topics[1] || 'Unknown Investor'
+              const farmId = parsed.topics[2] || 'farm-1'
+              const amountStroops = BigInt(parsed.value || 0)
+              const amountUsdc = Number(amountStroops) / 10_000_000
+
+              set((state: any) => {
+                const updatedFarms = state.farms.map((f: any) => {
+                  if (f.id === farmId || f.contractAddress === contractAddress) {
+                    return { ...f, currentFunding: f.currentFunding + amountUsdc }
+                  }
+                  return f
+                })
+
+                const newTx: any = {
+                  id: `tx-${rawEv.id}`,
+                  txHash: rawEv.id,
+                  type: 'FUND',
+                  amount: amountUsdc,
+                  userWallet: investor,
+                  farmId,
+                  memo: `On-chain Investment via Soroban Event`,
+                  status: 'CONFIRMED',
+                  createdAt: rawEv.ledgerClosedAt || new Date().toISOString()
+                }
+
+                return {
+                  farms: updatedFarms,
+                  myTransactions: [newTx, ...state.myTransactions],
+                  processedEventIds: [...state.processedEventIds, rawEv.id]
+                }
+              })
+              newEventsCount++
+            }
+          }
+
+          if (newEventsCount > 0) {
+            showToast(`Synced ${newEventsCount} new blockchain events!`, 'success')
+          }
+        } catch (err) {
+          console.error('Failed to ingest events:', err)
+        } finally {
+          set({ isSyncing: false })
+        }
+      },
+
+      simulateIncomingBlockchainEvent: (eventType) => {
+        const { showToast, address, farms, proposals } = useGapasStore.getState() as any
+        const mockEventId = `mock-ev-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+
+        set((state: any) => {
+          if (state.processedEventIds.includes(mockEventId)) return {}
+
+          const currentAddress = address || 'GC3DRQQ3S7LNDDEX5AB74MX26P'
+
+          if (eventType === 'investment') {
+            const activeFarm = state.farms.find((f: any) => f.status === 'ACTIVE') || state.farms[0]
+            const investAmount = 250
+            
+            const updatedFarms = state.farms.map((f: any) => {
+              if (f.id === activeFarm.id) {
+                const newFunding = f.currentFunding + investAmount
+                const nextStatus = newFunding >= f.fundingGoal ? 'FUNDED' : 'ACTIVE'
+                return { ...f, currentFunding: newFunding, status: nextStatus }
+              }
+              return f
+            })
+
+            const newTx: any = {
+              id: `TX-${Date.now()}`,
+              txHash: `d9e771ac73ec80503c7594f540d10ec068fb80981d11acea41aa193b${Math.floor(Math.random() * 9000 + 1000)}`,
+              type: 'FUND',
+              amount: investAmount,
+              userWallet: currentAddress,
+              farmId: activeFarm.id,
+              memo: `Funded ${activeFarm.name} (Soroban event: investment)`,
+              status: 'CONFIRMED',
+              createdAt: new Date().toISOString()
+            }
+
+            const newReceipt: any = {
+              id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
+              txHash: newTx.txHash,
+              type: 'INVESTMENT',
+              fromDid: `did:stellar:GAPAS:${currentAddress}`,
+              toDid: `did:stellar:GAPAS:${activeFarm.farmerWallet}`,
+              amountUsdc: investAmount,
+              amountPhp: investAmount * 57.43,
+              exchangeRate: 57.43,
+              assetId: activeFarm.id,
+              status: 'CONFIRMED',
+              createdAt: new Date().toISOString()
+            }
+
+            setTimeout(() => {
+              showToast(`🌾 Blockchain Event: investment of ${investAmount} USDC detected for ${activeFarm.name}!`, 'success')
+            }, 100)
+
+            return {
+              farms: updatedFarms,
+              myTransactions: [newTx, ...state.myTransactions],
+              receipts: [newReceipt, ...state.receipts],
+              processedEventIds: [...state.processedEventIds, mockEventId]
+            }
+          }
+
+          if (eventType === 'vote') {
+            const activeProp = state.proposals.find((p: any) => p.status === 'ACTIVE') || state.proposals[0]
+            if (!activeProp) return {}
+
+            const isYes = Math.random() > 0.3
+            const voteWeight = Math.floor(1200 + Math.random() * 800)
+
+            const updatedProps = state.proposals.map((p: any) => {
+              if (p.id === activeProp.id) {
+                return {
+                  ...p,
+                  yesVotes: isYes ? p.yesVotes + voteWeight : p.yesVotes,
+                  noVotes: !isYes ? p.noVotes + voteWeight : p.noVotes,
+                }
+              }
+              return p
+            })
+
+            setTimeout(() => {
+              showToast(`⚖️ Blockchain Event: vote cast on proposal "${activeProp.title}" (${isYes ? 'YES' : 'NO'} +${voteWeight} votes)!`, 'info')
+            }, 100)
+
+            return {
+              proposals: updatedProps,
+              processedEventIds: [...state.processedEventIds, mockEventId]
+            }
+          }
+
+          if (eventType === 'payout') {
+            const fundedFarm = state.farms.find((f: any) => f.status === 'FUNDED' || f.status === 'HARVESTING') || state.farms[0]
+            
+            const updatedFarms = state.farms.map((f: any) => {
+              if (f.id === fundedFarm.id) {
+                return { ...f, status: 'COMPLETED' }
+              }
+              return f
+            })
+
+            const payoutAmount = fundedFarm.fundingGoal * 1.18
+            const newTx: any = {
+              id: `TX-${Date.now()}`,
+              txHash: `d0ee56996d4a750989c385bde0feb322825dbcf82e8053659806e79db199${Math.floor(Math.random() * 9000 + 1000)}`,
+              type: 'RETURN',
+              amount: payoutAmount,
+              userWallet: currentAddress,
+              farmId: fundedFarm.id,
+              memo: `Payout distributed for ${fundedFarm.name} (Soroban event: payout)`,
+              status: 'CONFIRMED',
+              createdAt: new Date().toISOString()
+            }
+
+            const newReceipt: any = {
+              id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
+              txHash: newTx.txHash,
+              type: 'PAYOUT',
+              fromDid: `did:stellar:GAPAS:${fundedFarm.farmerWallet}`,
+              toDid: `did:stellar:GAPAS:${currentAddress}`,
+              amountUsdc: payoutAmount,
+              amountPhp: payoutAmount * 57.43,
+              exchangeRate: 57.43,
+              assetId: fundedFarm.id,
+              status: 'CONFIRMED',
+              createdAt: new Date().toISOString()
+            }
+
+            setTimeout(() => {
+              showToast(`🎉 Blockchain Event: harvest payout of ${payoutAmount.toFixed(2)} USDC completed for ${fundedFarm.name}!`, 'success')
+            }, 100)
+
+            return {
+              farms: updatedFarms,
+              myTransactions: [newTx, ...state.myTransactions],
+              receipts: [newReceipt, ...state.receipts],
+              portfolioTotal: state.portfolioTotal + payoutAmount,
+              totalEarnings: state.totalEarnings + (payoutAmount - fundedFarm.fundingGoal),
+              processedEventIds: [...state.processedEventIds, mockEventId]
+            }
+          }
+
+          return {}
+        })
+      },
+      clearProcessedEvents: () => set({ processedEventIds: [] }),
+      deploySmartContract: async (deployerAddress) => {
+        const { showToast } = useGapasStore.getState() as any
+        try {
+          const { deployGapasContract } = await import('@/lib/contract')
+          const res = await deployGapasContract({ deployerAddress })
+          
+          if (res.success && res.contractId) {
+            // Call local API to update .env on disk
+            try {
+              await fetch('/api/deploy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contractAddress: res.contractId })
+              })
+            } catch (envErr) {
+              console.warn('Could not update .env file on disk, but store updated:', envErr)
+            }
+
+            // Update local farms in mock/store with the new contract address
+            set((state: any) => ({
+              farms: state.farms.map((f: any) => ({ ...f, contractAddress: res.contractId }))
+            }))
+
+            showToast(`Contract deployed to Testnet: ${res.contractId.slice(0, 8)}...`, 'success')
+            return { success: true, contractId: res.contractId, txHash: res.txHash }
+          } else {
+            const errMsg = (res as any).error || 'Failed to deploy contract'
+            showToast(errMsg, 'error')
+            return { success: false, error: errMsg }
+          }
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : 'Deployment failed'
+          showToast(errMsg, 'error')
+          return { success: false, error: errMsg }
+        }
+      },
     }),
     {
       name: 'gapas-storage-v2',

@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
           txHash,
           type: 'INSURANCE',
           fromDid: 'did:stellar:GAPAS:SorobanWeatherInsuranceContract',
-          toDid: `did:stellar:GAPAS:${address || 'GAX_MOCK_USER_7F8E9D2C3B4A5'}`,
+          toDid: `did:stellar:GAPAS:${address || 'GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD'}`,
           amountUsdc: totalPayout,
           amountPhp: totalPayout * USDC_TO_PHP_RATE,
           exchangeRate: USDC_TO_PHP_RATE,

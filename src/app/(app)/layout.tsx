@@ -94,7 +94,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isConnected) {
-      const mockAddress = 'GAX_MOCK_USER_7F8E9D2C3B4A5'
+      const mockAddress = 'GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD'
       setWalletConnected(mockAddress, 'testnet')
       setUser({
         id: mockAddress,

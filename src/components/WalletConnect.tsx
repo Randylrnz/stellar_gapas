@@ -17,23 +17,54 @@ export default function WalletConnect({ onSuccess, variant = 'full' }: WalletCon
     setLoading(true)
     setConnecting(true)
 
-    // Mock connection
+    try {
+      const { connectFreighter, isFreighterInstalled } = await import('@/lib/stellar')
+      const installed = await isFreighterInstalled()
+      
+      if (installed) {
+        const res = await connectFreighter()
+        if (res.success && res.address) {
+          setWalletConnected(res.address, res.network || 'testnet')
+          setUser({
+            id: res.address,
+            walletAddress: res.address,
+            role: 'INVESTOR',
+            displayName: 'Juan dela Cruz (Freighter)',
+            createdAt: new Date().toISOString(),
+          })
+          showToast(`Wallet connected successfully: ${res.address.slice(0, 6)}...${res.address.slice(-4)}`, 'success')
+          setLoading(false)
+          setConnecting(false)
+          onSuccess?.(res.address)
+          return
+        } else {
+          showToast(`Freighter error: ${(res as any).error || 'Failed to connect'}. Connecting in Demo Mode...`, 'info')
+        }
+      } else {
+        showToast('Freighter wallet not detected. Connecting in Demo Mode...', 'info')
+      }
+    } catch (err) {
+      console.warn('Freighter connection failed, falling back to demo:', err)
+    }
+
+    // Mock connection fallback using the user's active testnet account
     setTimeout(() => {
-      const mockAddress = 'GAX_MOCK_USER_7F8E9D2C3B4A5'
+      const mockAddress = 'GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD'
       setWalletConnected(mockAddress, 'testnet')
       setUser({
         id: mockAddress,
         walletAddress: mockAddress,
         role: 'INVESTOR',
-        displayName: 'Demo User',
+        displayName: 'Demo User (Stellar Expert)',
         createdAt: new Date().toISOString(),
       })
-      showToast('Wallet connected successfully!', 'success')
+      showToast(`Connected in Demo Mode with account: ${mockAddress.slice(0, 6)}...${mockAddress.slice(-4)}`, 'success')
       setLoading(false)
       setConnecting(false)
       onSuccess?.(mockAddress)
     }, 600)
   }
+
 
   if (variant === 'compact') {
     return (

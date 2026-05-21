@@ -41,7 +41,7 @@ export default function WalletPage() {
   const [withdrawDestination, setWithdrawDestination] = useState<string>('')
   const [withdrawLoading, setWithdrawLoading] = useState(false)
 
-  const did = user?.did || `did:stellar:GAPAS:${address || 'GAX_MOCK_USER_7F8E9D2C3B4A5'}`
+  const did = user?.did || `did:stellar:GAPAS:${address || 'GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD'}`
 
   function copyAddress() {
     if (!address) return
