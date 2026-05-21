@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Sprout, Wallet, BarChart3, User, LogOut, Gavel, ClipboardList, Menu, X } from 'lucide-react'
+import { Home, Wallet, BarChart3, User, LogOut, FileText, ClipboardList, Menu, X, Store, Sprout } from 'lucide-react'
 import { useGapasStore } from '@/store/useGapasStore'
 
 export default function MobileHeader() {
@@ -39,18 +39,18 @@ export default function MobileHeader() {
         return [
           { href: '/cooperative', icon: ClipboardList, label: 'Ticketing Desk' },
           { href: '/wallet', icon: Wallet, label: 'Coop Wallet' },
-          { href: '/dao', icon: Gavel, label: 'Samahan ng Magsasaka' },
+          { href: '/farms', icon: Store, label: 'Marketplace' },
           { href: '/profile', icon: User, label: 'Coop Profile' },
         ]
       case 'FARMER':
       default:
         return [
           { href: '/dashboard', icon: Home, label: 'Dashboard' },
-          { href: '/farms', icon: Sprout, label: 'Palengke' },
+          { href: '/farms', icon: Store, label: 'Marketplace' },
           { href: '/portfolio', icon: BarChart3, label: 'My Activities' },
           { href: '/wallet', icon: Wallet, label: 'Wallet' },
           { href: '/cooperative', icon: ClipboardList, label: 'Cooperative' },
-          { href: '/dao', icon: Gavel, label: 'Samahan ng Magsasaka' },
+          { href: '/dao', icon: FileText, label: 'Proposals' },
           { href: '/profile', icon: User, label: 'Profile' },
         ]
     }

@@ -412,45 +412,54 @@ export default function ProfilePage() {
           })}
         </div>
 
-        {/* Verification Flow Descriptions - Emoji Purged */}
+        {/* Simplified Verification Flow Info */}
         <div style={{
           marginTop: '1rem',
-          padding: '1rem',
+          padding: '1rem 1.25rem',
           background: 'var(--color-surface)',
           borderRadius: 'var(--radius-md)',
           border: '1px solid var(--color-border)'
         }}>
-          <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Verification Flow Protocol
+          <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            How Verification Works
           </h4>
-          <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <li>
-              Government credentials (DENR, DA, ATI) are automatically cross-checked against their public registries via API — no manual step needed if your details match.
-            </li>
-            <li>
-              Platform credentials (KYC, AML) are reviewed by the G.A.P.A.S compliance team within 1-2 business days after document upload.
-            </li>
-            <li>
-              Barangay Clearance is reviewed manually by your assigned barangay officer after you upload the document.
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      {/* Profile settings info */}
-      <div className="animate-fade-in-up delay-250" style={{ marginBottom: '1.5rem' }}>
-        <div className="gapas-card" style={{ padding: '1rem 1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.8rem' }}>
-            <span style={{ color: 'var(--color-text-muted)' }}>Compliance Standard</span>
-            <strong style={{ color: 'var(--color-text)' }}>W3C Verifiable Credentials</strong>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>🏛️</span>
+              <div>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.1rem' }}>Government Credentials</p>
+                <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', lineHeight: 1.45 }}>DENR, DA, ATI — auto-verified via public registries. No manual step needed if your details match.</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>🛡️</span>
+              <div>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.1rem' }}>Platform Credentials (KYC / AML)</p>
+                <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', lineHeight: 1.45 }}>Reviewed by the G.A.P.A.S compliance team within 1–2 business days after document upload.</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>📄</span>
+              <div>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.1rem' }}>Barangay Clearance</p>
+                <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', lineHeight: 1.45 }}>Manually reviewed by your assigned barangay officer after document upload.</p>
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.8rem' }}>
-            <span style={{ color: 'var(--color-text-muted)' }}>Ledger Identity Standard</span>
-            <strong style={{ color: 'var(--color-text)' }}>SEP-10 Secure Authentication</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-            <span style={{ color: 'var(--color-text-muted)' }}>Soroban Smart Contract</span>
-            <strong style={{ color: 'var(--color-text)' }}>v2.1 GapasDIDRegistry</strong>
+          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: '0.875rem', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>Compliance Standards</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>W3C Verifiable Credentials</span>
+              <span className="badge badge-success" style={{ fontSize: '0.6rem' }}>Active</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>SEP-10 Secure Authentication</span>
+              <span className="badge badge-success" style={{ fontSize: '0.6rem' }}>Active</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Soroban Smart Contract</span>
+              <strong style={{ color: 'var(--color-text)', fontSize: '0.75rem' }}>v2.1 GapasDIDRegistry</strong>
+            </div>
           </div>
         </div>
       </div>

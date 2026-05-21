@@ -5,7 +5,7 @@ import { useGapasStore } from '@/store/useGapasStore'
 import { useRouter } from 'next/navigation'
 import { MOCK_COOPERATIVES } from '@/lib/mockData'
 import type { RiskLevel } from '@/lib/types'
-import { Sprout, Loader2, CheckCircle, ArrowLeft, Info, Activity, Wrench, Trees, AlertTriangle, Users, MapPin, ClipboardList, Compass, Check } from 'lucide-react'
+import { Sprout, Loader2, CheckCircle, ArrowLeft, Info, Activity, Wrench, AlertTriangle, Users, MapPin, ClipboardList, Compass, Check } from 'lucide-react'
 import Link from 'next/link'
 
 const CROP_TYPES = [
@@ -33,7 +33,7 @@ const BENGUET_BARANGAYS = [
   { name: 'Sablan', lat: 16.4384, lng: 120.5186, x: 120, y: 180, alt: 'Tropical Fruits and Banana Farms' }
 ]
 
-type AssetType = 'CROP' | 'LIVESTOCK' | 'EQUIPMENT' | 'CARBON'
+type AssetType = 'CROP' | 'LIVESTOCK' | 'EQUIPMENT'
 
 export default function CreateFarmPage() {
   const { 
@@ -73,7 +73,6 @@ export default function CreateFarmPage() {
     eqPurchased: '2025-01-01',
     eqNextMaint: '2026-06-01',
     eqCondition: 'GOOD' as 'NEW' | 'GOOD' | 'FAIR' | 'NEEDS_REPAIR',
-    carbonUnits: '',
   })
 
   useEffect(() => {
@@ -98,7 +97,6 @@ export default function CreateFarmPage() {
     if (assetType === 'CROP' && !form.cropType) { showToast('Please select a crop type', 'error'); return }
     if (assetType === 'LIVESTOCK' && !form.livestockType) { showToast('Please select a livestock type', 'error'); return }
     if (assetType === 'EQUIPMENT' && !form.eqModel) { showToast('Please enter an equipment model', 'error'); return }
-    if (assetType === 'CARBON' && !form.carbonUnits) { showToast('Please enter carbon offset units', 'error'); return }
 
     setSubmitting(true)
     await new Promise(r => setTimeout(r, 2000))
@@ -121,9 +119,9 @@ export default function CreateFarmPage() {
       location: form.location,
       fundingGoal: parseFloat(form.fundingGoal),
       currentFunding: 0,
-      expectedYield: assetType === 'CARBON' ? `${form.carbonUnits} tCO2 Offset` : form.expectedYield,
+      expectedYield: form.expectedYield,
       expectedReturn: parseFloat(form.expectedReturn) || 15,
-      riskLevel: assetType === 'CARBON' ? 'LOW' as const : assetType === 'EQUIPMENT' ? 'LOW' as const : form.riskLevel,
+      riskLevel: assetType === 'EQUIPMENT' ? 'LOW' as const : form.riskLevel,
       duration: assetType === 'EQUIPMENT' ? 365 : parseInt(form.duration),
       harvestSchedule: assetType === 'EQUIPMENT' ? 'Continuous Operation' : form.harvestSchedule,
       status: 'PENDING' as const,
@@ -132,8 +130,8 @@ export default function CreateFarmPage() {
       cooperative: cooperativeEnabled ? selectedCoop : undefined,
       cooperativeEnabled: cooperativeEnabled,
       weatherRisk: 'LOW' as const,
-      quantity: assetType === 'LIVESTOCK' ? 10 : assetType === 'CARBON' ? parseFloat(form.carbonUnits) : undefined,
-      unit: assetType === 'LIVESTOCK' ? 'heads' : assetType === 'CARBON' ? 'tCO2' : 'tons',
+      quantity: assetType === 'LIVESTOCK' ? 10 : undefined,
+      unit: assetType === 'LIVESTOCK' ? 'heads' : 'tons',
       valuePhp: valPhp,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -196,13 +194,12 @@ export default function CreateFarmPage() {
           <div style={{ marginBottom: '1.5rem' }} className="animate-fade-in-up">
             <p className="form-label" style={{ marginBottom: '0.75rem' }}>Select Asset Type to Tokenize *</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.5rem' }}>
-              {(['CROP', 'LIVESTOCK', 'EQUIPMENT', 'CARBON'] as AssetType[]).map((type) => {
+              {(['CROP', 'LIVESTOCK', 'EQUIPMENT'] as AssetType[]).map((type) => {
                 const getIcon = (t: AssetType) => {
                   switch (t) {
                     case 'CROP': return <Sprout size={24} style={{ color: 'var(--color-primary)' }} />
                     case 'LIVESTOCK': return <Activity size={24} style={{ color: 'var(--color-primary)' }} />
                     case 'EQUIPMENT': return <Wrench size={24} style={{ color: 'var(--color-primary)' }} />
-                    case 'CARBON': return <Trees size={24} style={{ color: 'var(--color-primary)' }} />
                   }
                 }
                 const getLabel = (t: AssetType) => {
@@ -210,7 +207,6 @@ export default function CreateFarmPage() {
                     case 'CROP': return 'Crop'
                     case 'LIVESTOCK': return 'Livestock'
                     case 'EQUIPMENT': return 'Equipment'
-                    case 'CARBON': return 'Carbon'
                   }
                 }
                 return (
@@ -343,29 +339,7 @@ export default function CreateFarmPage() {
               </div>
             )}
 
-            {assetType === 'CARBON' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--color-border)', padding: '1rem', borderRadius: 'var(--radius-lg)', background: 'var(--color-surface-2)', marginBottom: '1rem' }} className="animate-fade-in-up">
-                <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.375rem', margin: 0 }}>
-                  Carbon Credit Certification
-                </h4>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="carbon-units">Carbon Credit Offset Units (tons metric tCO2) *</label>
-                  <input
-                    id="carbon-units"
-                    type="number"
-                    className="form-input"
-                    placeholder="e.g., 250"
-                    min={1}
-                    value={form.carbonUnits}
-                    onChange={e => handleChange('carbonUnits', e.target.value)}
-                    required
-                  />
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem', display: 'block' }}>
-                    1 tCO2 offset represents a verified reduction of 1 metric ton of carbon dioxide emissions.
-                  </span>
-                </div>
-              </div>
-            )}
+
 
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>

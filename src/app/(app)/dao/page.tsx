@@ -71,7 +71,7 @@ export default function DaoPage() {
       setTitle('')
       setDetail('')
       setBudget('')
-      showToast('DAO Governance Proposal published on-chain successfully!', 'success')
+      showToast('Proposal published on-chain successfully!', 'success')
     }, 1200)
   }
 
@@ -93,8 +93,8 @@ export default function DaoPage() {
   return (
     <div className="page-with-nav app-container">
       <div className="page-header animate-fade-in-up">
-        <h1 className="page-title">⚖️ DAO Governance</h1>
-        <p className="page-subtitle">Decentralized Voting, Asset Budgets & Policy Proposals</p>
+        <h1 className="page-title">⚖️ Proposals</h1>
+        <p className="page-subtitle">Community Voting, Asset Budgets & Policy Proposals</p>
       </div>
 
 
@@ -251,6 +251,27 @@ export default function DaoPage() {
           </form>
         </div>
       )}
+
+      {/* After voting ends — info card */}
+      <div className="gapas-card animate-fade-in-up delay-150" style={{ padding: '1rem 1.25rem', marginBottom: '1.25rem', borderLeft: '3px solid var(--color-primary)', background: 'rgba(27,67,50,0.03)' }}>
+        <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-primary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          📋 What happens after a proposal ends?
+        </h4>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>
+            <span style={{ minWidth: 22, height: 22, borderRadius: '50%', background: '#10b981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, flexShrink: 0 }}>1</span>
+            <span><strong>If PASSED:</strong> The proposal is anchored on-chain with a PASSED status. The cooperative treasury automatically releases the approved budget and the action is executed within 3–5 business days.</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>
+            <span style={{ minWidth: 22, height: 22, borderRadius: '50%', background: '#ef4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, flexShrink: 0 }}>2</span>
+            <span><strong>If REJECTED:</strong> The proposal is marked REJECTED on-chain. No funds are released. The proposer may revise and resubmit after a 7-day cool-down period.</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>
+            <span style={{ minWidth: 22, height: 22, borderRadius: '50%', background: '#f59e0b', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 800, flexShrink: 0 }}>3</span>
+            <span><strong>All outcomes</strong> are permanently recorded on the Stellar ledger — transparent and auditable by any GAPAS member at any time.</span>
+          </div>
+        </div>
+      </div>
 
       {/* 2. PROPOSALS LIST FEED */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }} className="animate-fade-in-up delay-200">

@@ -231,7 +231,7 @@ export default function DashboardPage() {
           <h2 className="section-title">Quick Actions</h2>
           <div className="responsive-grid-actions">
             {[
-              { href: '/farms', icon: Sprout, label: 'Palengke', color: '#1B4332', bg: 'rgba(27,67,50,0.1)' },
+              { href: '/farms', icon: Sprout, label: 'Marketplace', color: '#1B4332', bg: 'rgba(27,67,50,0.1)' },
               { href: '/portfolio', icon: TrendingUp, label: 'My Activities', color: '#2d6a4f', bg: 'rgba(45,106,79,0.1)' },
               { href: '/wallet', icon: Wallet, label: 'My Wallet', color: '#f9ad00', bg: 'rgba(249,173,0,0.12)' },
               { href: '/wallet', icon: FileText, label: 'Transactions', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
@@ -347,6 +347,9 @@ export default function DashboardPage() {
                 <p style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 800, fontFamily: 'var(--font-jakarta)' }}>
                   {formatUSDC(investorTotalInvested)} <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>USDC</span>
                 </p>
+                <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.2rem' }}>
+                  ≈ {formatPHP(investorTotalInvested * USDC_TO_PHP_RATE)}
+                </p>
               </div>
               <div style={{
                 background: 'rgba(249,173,0,0.15)',
@@ -430,7 +433,7 @@ export default function DashboardPage() {
                 <Sprout size={20} color="#2d6a4f" />
               </div>
               <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
-                Irehistro ang Asset
+                Register My Asset
               </span>
             </Link>
 
@@ -494,7 +497,7 @@ export default function DashboardPage() {
                 <Gavel size={20} color="#3b82f6" />
               </div>
               <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
-                Farmers Assembly
+                Proposals
               </span>
             </Link>
           </div>
@@ -505,7 +508,7 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}>
               <CloudRain size={16} color="var(--color-primary)" />
-              Barangay Weather Oracle Widget
+              Weather Update
             </h3>
           </div>
 
@@ -579,7 +582,7 @@ export default function DashboardPage() {
             </select>
           </div>
           <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
-            Reference: <strong>{chartFarmLabel}</strong> — 12-month rolling window comparing actual vs AI predicted yield (cavans/hectare).
+            All registered farm yield records stored in the GAPAS database (12-month rolling harvest history per farm).
           </p>
 
           <div style={{ position: 'relative', width: '100%', height: h, background: 'var(--color-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginBottom: '1rem', overflow: 'hidden' }}>
@@ -663,13 +666,81 @@ export default function DashboardPage() {
         <div className="animate-fade-in-up delay-200" style={{ marginBottom: '1.5rem' }}>
           <h2 className="section-title">My Registered Tokenized Assets ({farmerFarms.length})</h2>
           {farmerFarms.length === 0 ? (
-            <div className="gapas-card" style={{ padding: '2rem', textAlign: 'center' }}>
-              <Sprout size={36} color="var(--color-text-muted)" style={{ opacity: 0.5, margin: '0 auto 0.5rem' }} />
-              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>No assets registered under your wallet address yet.</p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>Tokenize your crops, livestock, or equipment to raise crowd-investing funding!</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {/* Example tokenized asset 1 */}
+              <div className="gapas-card" style={{ padding: '1rem', border: '1px dashed var(--color-border)', opacity: 0.85 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                  <div>
+                    <span style={{
+                      fontSize: '0.65rem',
+                      backgroundColor: 'var(--color-primary-light)',
+                      color: '#fff',
+                      padding: '0.15rem 0.4rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      marginRight: '0.5rem'
+                    }}>
+                      CROP-7821
+                    </span>
+                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-text)', display: 'inline-block' }}>
+                      Benguet Strawberry Farm (Demo)
+                    </h3>
+                  </div>
+                  <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>ACTIVE</span>
+                </div>
+                <div className="grid-responsive-2" style={{ gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                  <div><strong>Asset Type:</strong> Crop</div>
+                  <div><strong>Estimated Val:</strong> ₱228,600</div>
+                </div>
+                <div className="progress-bar-container" style={{ marginBottom: '0.375rem' }}>
+                  <div className="progress-bar-fill" style={{ width: '30%' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>30% Crowdfunded</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>1,200 / 4,000 USDC</span>
+                </div>
+              </div>
+              {/* Example tokenized asset 2 */}
+              <div className="gapas-card" style={{ padding: '1rem', border: '1px dashed var(--color-border)', opacity: 0.85 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                  <div>
+                    <span style={{
+                      fontSize: '0.65rem',
+                      backgroundColor: 'var(--color-primary-light)',
+                      color: '#fff',
+                      padding: '0.15rem 0.4rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      marginRight: '0.5rem'
+                    }}>
+                      LIVE-4432
+                    </span>
+                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-text)', display: 'inline-block' }}>
+                      Atok Native Hog Farm (Demo)
+                    </h3>
+                  </div>
+                  <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>PENDING</span>
+                </div>
+                <div className="grid-responsive-2" style={{ gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                  <div><strong>Asset Type:</strong> Livestock</div>
+                  <div><strong>Estimated Val:</strong> ₱344,580</div>
+                </div>
+                <div className="progress-bar-container" style={{ marginBottom: '0.375rem' }}>
+                  <div className="progress-bar-fill" style={{ width: '0%' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Awaiting Verification</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>0 / 6,000 USDC</span>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textAlign: 'center', fontStyle: 'italic' }}>
+                These are sample assets. Register your own to see them here.
+              </p>
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                 <button onClick={handleCreateTicket} className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}>Create Coop Ticket</button>
-                <Link href="/create-farm" className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', textDecoration: 'none', background: 'var(--color-primary)', color: '#fff' }}>Direct Register</Link>
+                <Link href="/create-farm" className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', textDecoration: 'none', background: 'var(--color-primary)', color: '#fff' }}>Register My Asset</Link>
               </div>
             </div>
           ) : (
