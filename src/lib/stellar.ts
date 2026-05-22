@@ -378,7 +378,7 @@ export async function simulateStellarTransfer(params: {
         amountUsdc: params.amount,
         contractAddress: cleanTo,
       })
-      if (res.success && res.txHash) {
+      if (res.success) {
         return { success: true, txHash: res.txHash }
       }
       return { success: false, error: res.error || 'Contract call failed' }
