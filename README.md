@@ -1,5 +1,4 @@
-# [Project Name]
-G.A.P.A.S
+# G.A.P.A.S
 (Global Agricultural Payment and Asset Settlement)
 
 ## 🧩 Problem
