@@ -4,14 +4,21 @@ import { useState, useEffect } from 'react'
 import { useGapasStore } from '@/store/useGapasStore'
 import FarmCard from '@/components/FarmCard'
 import { MOCK_FARMS } from '@/lib/mockData'
-import type { Farm } from '@/lib/types'
+import type { Farm, FarmStatus } from '@/lib/types'
+
 import { Search, X, Plus, Eye } from 'lucide-react'
 import Link from 'next/link'
 
 type FilterCategory = 'MY_ASSETS' | 'ALL' | 'CROP' | 'LIVESTOCK' | 'EQUIPMENT'
 
 // Sample view-only assets for "My Assets" tab
-const SAMPLE_MY_ASSETS = [
+const SAMPLE_MY_ASSETS: (Partial<Farm> & {
+  tokenId: string;
+  valuePhp: number;
+  status: FarmStatus;
+  currentFunding: number;
+  fundingGoal: number;
+})[] = [
   {
     id: 'sample-1',
     tokenId: 'CROP-7821',
@@ -23,7 +30,7 @@ const SAMPLE_MY_ASSETS = [
     currentFunding: 1200,
     expectedReturn: 25,
     riskLevel: 'MEDIUM' as const,
-    status: 'ACTIVE' as const,
+    status: 'ACTIVE' as FarmStatus,
     valuePhp: 228600,
     description: 'Mountain strawberry cultivation at 1500m elevation. Premium fresh strawberries supplied to Metro Manila supermarkets.',
     harvestSchedule: 'October 2025',
@@ -40,7 +47,7 @@ const SAMPLE_MY_ASSETS = [
     currentFunding: 0,
     expectedReturn: 20,
     riskLevel: 'MEDIUM' as const,
-    status: 'PENDING' as const,
+    status: 'PENDING' as FarmStatus,
     valuePhp: 344580,
     description: 'Free-range native hog breeding with biosecurity protocols. Market-ready hogs in 6 months.',
     harvestSchedule: 'November 2025',
