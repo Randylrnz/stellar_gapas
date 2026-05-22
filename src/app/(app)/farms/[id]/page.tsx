@@ -16,13 +16,28 @@ import Link from 'next/link'
 import { simulateStellarTransfer, getTxExplorerUrl } from '@/lib/stellar'
 import { useRouter } from 'next/navigation'
 
+function getAssetImage(farm: any): string {
+  if (!farm) return '/Crops.png'
+  const typeStr = (farm.assetType || '').toUpperCase()
+  const cropStr = farm.cropType || ''
+  const livestockStr = farm.livestockType || ''
+  
+  if (typeStr === 'LIVESTOCK' || livestockStr) {
+    return '/LiveStock.png'
+  }
+  if (typeStr === 'EQUIPMENT' || farm.equipmentDetails) {
+    return '/Equipment.png'
+  }
+  return '/Crops.png'
+}
+
 export default function FarmDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
-  const { address, isConnected, addInvestment, addTransaction, showToast, farms, setFarms, farmBarangay } = useGapasStore()
+  const { address, isConnected, addInvestment, addTransaction, showToast, farms, setFarms, farmBarangay, simulateIncomingBlockchainEvent } = useGapasStore()
   const router = useRouter()
 
   const [amount, setAmount] = useState('')
@@ -113,6 +128,8 @@ export default function FarmDetailPage({
         if (typeof (useGapasStore.getState() as any).updateFarmFunding === 'function') {
           (useGapasStore.getState() as any).updateFarmFunding(farm.id, amtNum)
         }
+        // Wire the real Invest click to trigger the on-chain events log
+        simulateIncomingBlockchainEvent('investment')
         showToast(`Successfully invested ${formatUSDC(amtNum)} USDC!`, 'success')
         setAmount('')
       } else {
@@ -135,38 +152,57 @@ export default function FarmDetailPage({
 
       {/* Hero image */}
       <div style={{
-        height: 200,
-        background: 'linear-gradient(135deg, #012d1d 0%, #1B4332 50%, #40916c 100%)',
+        height: 220,
+        position: 'relative',
+        overflow: 'hidden',
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        position: 'relative',
       }}>
+        <img
+          src={getAssetImage(farm)}
+          alt={farm.name}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
+        />
         <div style={{
-          width: 72,
-          height: 72,
-          background: 'rgba(255,255,255,0.12)',
-          borderRadius: '50%',
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.75) 100%)',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: '0.75rem',
         }}>
-          <Sprout size={36} color="rgba(255,255,255,0.9)" />
+          <p style={{ color: 'rgba(255,255,255,0.95)', fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            {farm.cropType || farm.livestockType || farm.assetType}
+          </p>
         </div>
-        <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1rem', fontWeight: 600 }}>
-          {farm.cropType || farm.livestockType || farm.assetType}
-        </p>
         {/* Badges */}
         <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
-          <span className={`badge ${farm.status === 'FUNDED' ? 'badge-success' : 'badge-info'}`}>{farm.status}</span>
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '0.35rem 0.65rem',
+            borderRadius: '6px',
+            fontSize: '0.75rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: '#ffffff',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+            backgroundColor: farm.status === 'FUNDED' || farm.status === 'COMPLETED'
+              ? '#16a34a' 
+              : farm.status === 'ACTIVE'
+                ? '#165c2d' 
+                : '#d97706'
+          }}>
+            {farm.status}
+          </span>
         </div>
-        {farm.cooperativeEnabled && farm.cooperative && (
-          <div style={{ position: 'absolute', bottom: '1rem', left: '1rem' }}>
-            <span className="coop-badge">🤝 Cooperative: {farm.cooperative.name}</span>
-          </div>
-        )}
       </div>
 
       <div className="app-container" style={{ paddingTop: '1.25rem' }}>
@@ -239,7 +275,7 @@ export default function FarmDetailPage({
           <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '1rem', lineHeight: 1.4 }}>
             Overall fund: <strong>{formatUSDC(farm.fundingGoal)} USDC</strong>. When a farm generates income, profit is split based on each investor's ownership percentage of the total fund.
           </p>
-          
+
           {amountNum > 0 && (
             <div style={{
               background: 'rgba(27,67,50,0.05)',
@@ -261,10 +297,10 @@ export default function FarmDetailPage({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
             {[
-              { label: '👨‍🌾 Farmer Net Profit', pct: dist.farmerPercent, color: '#1B4332', note: `${dist.farmerPercent}% of total income` },
-              { label: '💼 Investors Pool Share', pct: dist.investorPercent, color: '#3b82f6', note: `${dist.investorPercent}% split proportionally among all investors` },
-              { label: '⚡ Platform Settlement Fee', pct: dist.platformPercent, color: '#a855f7', note: `${dist.platformPercent}% platform fee` },
-              ...(farm.cooperativeEnabled && farm.assetType === 'CROP' ? [{ label: '🤝 Cooperative Onboarding Fee', pct: dist.cooperativeFeePercent, color: '#f9ad00', note: `${dist.cooperativeFeePercent}% of asset value` }] : []),
+              { label: 'Farmer Net Profit', pct: dist.farmerPercent, color: '#1B4332', note: `${dist.farmerPercent}% of total income` },
+              { label: 'Investors Pool Share', pct: dist.investorPercent, color: '#3b82f6', note: `${dist.investorPercent}% split proportionally among all investors` },
+              { label: 'Platform Settlement Fee', pct: dist.platformPercent, color: '#a855f7', note: `${dist.platformPercent}% platform fee` },
+              ...(farm.cooperativeEnabled && farm.assetType === 'CROP' ? [{ label: 'Cooperative Onboarding Fee', pct: dist.cooperativeFeePercent, color: '#f9ad00', note: `${dist.cooperativeFeePercent}% of asset value` }] : []),
             ].map(({ label, pct, color, note }) => (
               <div key={label}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
@@ -352,8 +388,8 @@ export default function FarmDetailPage({
             {farm.weatherRisk === 'LOW'
               ? 'Mababang weather risk. Favorable conditions for this crop/livestock type.'
               : farm.weatherRisk === 'MODERATE'
-              ? 'Katamtamang weather risk. Seasonal rainfall may affect yield by ±15%.'
-              : 'Mataas na weather risk. Storm season active. Mag-invest nang maingat.'}
+                ? 'Katamtamang weather risk. Seasonal rainfall may affect yield by ±15%.'
+                : 'Mataas na weather risk. Storm season active. Mag-invest nang maingat.'}
           </p>
         </div>
 
@@ -454,7 +490,7 @@ export default function FarmDetailPage({
                   ) : (
                     <>
                       <Shield size={20} />
-                      Fund via Freighter
+                      Invest
                     </>
                   )}
                 </button>

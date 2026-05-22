@@ -2,33 +2,34 @@
 @import "tailwindcss";
 
 :root {
-  /* GAPAS Design Tokens */
-  --color-primary: #1B4332;
-  --color-primary-dark: #012d1d;
-  --color-primary-light: #2d6a4f;
-  --color-primary-xlight: #40916c;
-  --color-amber: #f9ad00;
-  --color-amber-dark: #d4940a;
-  --color-amber-light: #ffc933;
-  --color-surface: #fcf9f8;
-  --color-surface-2: #f4f1ef;
-  --color-surface-3: #ebe6e3;
+  /* GAPAS Design Tokens - Custom Palette */
+  --color-primary: #165c2d;
+  --color-primary-dark: #0d3a1c;
+  --color-primary-light: #6eaa2b;
+  --color-primary-xlight: #b9ce99;
+  --color-accent: #cdd41e;
+  --color-amber: #cdd41e;
+  --color-amber-dark: #b5bb16;
+  --color-amber-light: #dce23a;
+  --color-surface: #f9faf1;
+  --color-surface-2: #f2f4e1;
+  --color-surface-3: #e5e8cd;
   --color-text: #1c1b1b;
-  --color-text-secondary: #5a5757;
-  --color-text-muted: #9b9696;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
+  --color-text-secondary: #4a4d40;
+  --color-text-muted: #8c907b;
+  --color-success: #6eaa2b;
+  --color-warning: #cdd41e;
   --color-danger: #ef4444;
-  --color-info: #3b82f6;
-  --color-border: #e5e0dc;
+  --color-info: #165c2d;
+  --color-border: #d2d6bb;
   --color-card: #ffffff;
-  --color-card-hover: #faf7f5;
+  --color-card-hover: #fcfcf9;
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #1B4332 0%, #2d6a4f 50%, #40916c 100%);
-  --gradient-amber: linear-gradient(135deg, #f9ad00 0%, #ffc933 100%);
-  --gradient-hero: linear-gradient(160deg, #012d1d 0%, #1B4332 40%, #2d6a4f 100%);
-  --gradient-card: linear-gradient(145deg, #ffffff 0%, #fcf9f8 100%);
+  --gradient-primary: linear-gradient(135deg, #165c2d 0%, #6eaa2b 100%);
+  --gradient-amber: linear-gradient(135deg, #cdd41e 0%, #dce23a 100%);
+  --gradient-hero: linear-gradient(160deg, #0d3a1c 0%, #165c2d 50%, #6eaa2b 100%);
+  --gradient-card: linear-gradient(145deg, #ffffff 0%, #fcfcf9 100%);
 
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(27,67,50,0.08), 0 1px 2px rgba(27,67,50,0.06);
@@ -388,6 +389,15 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--color-border);
   overflow: hidden;
+}
+
+.action-hover-move {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease !important;
+}
+
+.action-hover-move:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 /* ========================
@@ -941,24 +951,32 @@ h1, h2, h3, h4, h5, h6 {
    ======================== */
 .toast {
   position: fixed;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--color-text);
+  top: 1.5rem;
+  right: 1.5rem;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  background: var(--color-primary-dark);
   color: #fff;
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--radius-full);
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 0.75rem 1rem;
+  border-radius: 4px; /* Square rectangle */
+  font-size: 0.8rem;
+  font-weight: 600;
   box-shadow: var(--shadow-lg);
   z-index: 1000;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 200px;
+  max-width: 320px;
+  white-space: normal;
+  border: 1px solid var(--color-border);
   animation: toastIn 0.3s ease;
 }
 
 @keyframes toastIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ========================

@@ -205,7 +205,7 @@ export const useGapasStore = create<GapasStore>()(
       isConnecting: false,
       network: 'testnet',
       user: null,
-      activeRole: 'INVESTOR',
+      activeRole: 'COOPERATIVE',
       balances: { usdc: 2450.75 },
 
       // UI initial state
@@ -239,6 +239,12 @@ export const useGapasStore = create<GapasStore>()(
           isConnected: true,
           isConnecting: false,
           network,
+          balances: { usdc: 12500.00 },
+          proposals: INITIAL_PROPOSALS,
+          myInvestments: MOCK_INVESTMENTS,
+          myTransactions: MOCK_TRANSACTIONS,
+          tickets: INITIAL_TICKETS,
+          receipts: INITIAL_RECEIPTS,
           user: {
             id: address,
             walletAddress: address,
@@ -259,7 +265,7 @@ export const useGapasStore = create<GapasStore>()(
           address: null,
           isConnected: false,
           user: null,
-          activeRole: 'INVESTOR',
+          activeRole: 'COOPERATIVE',
           balances: { usdc: 0 },
           myInvestments: [],
           myTransactions: [],

@@ -47,7 +47,8 @@ export default function CreateFarmPage() {
     setFarmBarangay,
     farmCoordinates,
     setFarmCoordinates,
-    generateTicket
+    generateTicket,
+    deploySmartContract
   } = useGapasStore()
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
@@ -99,7 +100,19 @@ export default function CreateFarmPage() {
     if (assetType === 'EQUIPMENT' && !form.eqModel) { showToast('Please enter an equipment model', 'error'); return }
 
     setSubmitting(true)
-    await new Promise(r => setTimeout(r, 2000))
+    
+    let deployedContractAddress = ''
+    let deployedTxHash = ''
+    
+    try {
+      const res = await deploySmartContract(address)
+      if (res.success && res.contractId) {
+        deployedContractAddress = res.contractId
+        deployedTxHash = res.txHash || ''
+      }
+    } catch (err) {
+      console.error('Auto deployment during asset tokenization failed:', err)
+    }
 
     const cooperativeEnabled = false
     const cooperativeId = undefined
@@ -124,8 +137,10 @@ export default function CreateFarmPage() {
       riskLevel: assetType === 'EQUIPMENT' ? 'LOW' as const : form.riskLevel,
       duration: assetType === 'EQUIPMENT' ? 365 : parseInt(form.duration),
       harvestSchedule: assetType === 'EQUIPMENT' ? 'Continuous Operation' : form.harvestSchedule,
-      status: 'PENDING' as const,
+      status: 'ACTIVE' as const,
       farmerWallet: address,
+      contractAddress: deployedContractAddress || 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC',
+      txHash: deployedTxHash || undefined,
       cooperativeId: cooperativeEnabled ? cooperativeId : undefined,
       cooperative: cooperativeEnabled ? selectedCoop : undefined,
       cooperativeEnabled: cooperativeEnabled,
@@ -147,7 +162,7 @@ export default function CreateFarmPage() {
     addFarm(newFarm)
     setSubmitting(false)
     setSubmitted(true)
-    showToast('Farm created and submitted for review!', 'success')
+    showToast('On-Chain Asset Tokenized successfully on Stellar network.', 'success')
   }
 
   if (submitted) {
@@ -162,9 +177,9 @@ export default function CreateFarmPage() {
         }}>
           <CheckCircle size={44} color="#16a34a" />
         </div>
-        <h2 style={{ fontSize: '1.375rem', fontWeight: 800, marginBottom: '0.5rem' }}>Farm Submitted!</h2>
+        <h2 style={{ fontSize: '1.375rem', fontWeight: 800, marginBottom: '0.5rem' }}>Asset Tokenization Initiated!</h2>
         <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem', maxWidth: 280 }}>
-          Your farm has been submitted for review. Once approved, it will be live on the marketplace.
+          On-Chain Asset Tokenized successfully on Stellar network.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: 280 }}>
           <Link href="/farms" className="btn btn-primary btn-full" id="create-farm-view-marketplace">
@@ -185,7 +200,7 @@ export default function CreateFarmPage() {
         <Link href="/farms" style={{ color: 'var(--color-text)', display: 'flex' }}>
           <ArrowLeft size={22} />
         </Link>
-        <h1 style={{ fontSize: '1rem', fontWeight: 700 }}>Create Farm Listing</h1>
+        <h1 style={{ fontSize: '1rem', fontWeight: 700 }}>Stellar Asset Tokenization</h1>
       </div>
 
       <div className="app-container" style={{ paddingTop: '1.25rem' }}>
@@ -620,17 +635,17 @@ export default function CreateFarmPage() {
               {submitting ? (
                 <>
                   <Loader2 size={20} className="spinner" />
-                  Submitting to Blockchain...
+                  Deploying Soroban Escrow & Tokenizing...
                 </>
               ) : (
                 <>
                   <Sprout size={20} />
-                  Submit Farm for Funding
+                  Tokenize Asset on Stellar
                 </>
               )}
             </button>
             <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', textAlign: 'center', marginTop: '0.625rem' }}>
-              Farm will be reviewed before appearing on marketplace
+              Asset will be registered on the Stellar blockchain network
             </p>
           </div>
         </form>

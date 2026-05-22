@@ -28,7 +28,7 @@ export default function WalletConnect({ onSuccess, variant = 'full' }: WalletCon
           setUser({
             id: res.address,
             walletAddress: res.address,
-            role: 'INVESTOR',
+            role: 'COOPERATIVE',
             displayName: 'Juan dela Cruz (Freighter)',
             createdAt: new Date().toISOString(),
           })
@@ -54,7 +54,7 @@ export default function WalletConnect({ onSuccess, variant = 'full' }: WalletCon
       setUser({
         id: mockAddress,
         walletAddress: mockAddress,
-        role: 'INVESTOR',
+        role: 'COOPERATIVE',
         displayName: 'Demo User (Stellar Expert)',
         createdAt: new Date().toISOString(),
       })

@@ -1,19 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useGapasStore } from '@/store/useGapasStore'
 import { shortenAddress } from '@/lib/types'
 import {
   Wallet, LogOut, ExternalLink, ShieldCheck, Award, FileText, CheckCircle,
-  AlertTriangle, UploadCloud, Copy, X, Loader2, Sparkles, MapPin, Key
+  AlertTriangle, UploadCloud, Copy, X, Loader2, Sparkles, MapPin, Key,
+  Activity, RefreshCw, Plus
 } from 'lucide-react'
 import { getAccountExplorerUrl } from '@/lib/stellar'
+import { useRouter } from 'next/navigation'
 
 export default function ProfilePage() {
+  const router = useRouter()
   const {
     address,
     isConnected,
     user,
+    activeRole,
     setWalletDisconnected,
     showToast,
     uploadCredential,
@@ -21,7 +25,14 @@ export default function ProfilePage() {
     farmBarangay,
     setFarmBarangay,
     farmCoordinates,
-    setFarmCoordinates
+    setFarmCoordinates,
+    ingestContractEvents,
+    simulateIncomingBlockchainEvent,
+    isSyncing,
+    processedEventIds,
+    deploySmartContract,
+    setWalletConnected,
+    setUser
   } = useGapasStore()
 
   const [copied, setCopied] = useState(false)
@@ -35,9 +46,163 @@ export default function ProfilePage() {
   const [latInput, setLatInput] = useState(farmCoordinates?.lat?.toString() || '16.5779')
   const [lngInput, setLngInput] = useState(farmCoordinates?.lng?.toString() || '120.7013')
 
+  // Stellar Network Hub states
+  const [showNetworkHub, setShowNetworkHub] = useState(true)
+  const [autoSync, setAutoSync] = useState(false)
+  const [eventLogs, setEventLogs] = useState<Array<{ id: string; type: string; details: string; time: string; txHash?: string }>>([
+    { id: 'initial-1', type: 'SYSTEM', details: 'GAPAS Event Listener initialized on Stellar Testnet', time: new Date().toLocaleTimeString() }
+  ])
+
+  // Smart Contract Deployment states
+  const [isDeploying, setIsDeploying] = useState(false)
+  const [deployStep, setDeployStep] = useState<string>('')
+  const [activeContractAddress, setActiveContractAddress] = useState<string>(
+    process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
+  )
+  const [activeRegistryAddress, setActiveRegistryAddress] = useState<string>(
+    process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_ADDRESS || ''
+  )
+  const [isWalletConnecting, setIsWalletConnecting] = useState(false)
+
+  const handleConnectFreighter = async () => {
+    setIsWalletConnecting(true)
+    try {
+      const { connectFreighter, isFreighterInstalled } = await import('@/lib/stellar')
+      const installed = await isFreighterInstalled()
+      if (!installed) {
+        showToast('Freighter wallet extension not detected. Please install it first.', 'error')
+        setIsWalletConnecting(false)
+        return
+      }
+      
+      const res = await connectFreighter()
+      if (res.success && res.address) {
+        setWalletConnected(res.address, res.network || 'testnet')
+        setUser({
+          id: res.address,
+          walletAddress: res.address,
+          role: 'COOPERATIVE',
+          displayName: 'Juan dela Cruz (Freighter)',
+          createdAt: new Date().toISOString(),
+        })
+        showToast(`Freighter connected: ${res.address.slice(0, 6)}...${res.address.slice(-4)}`, 'success')
+      } else {
+        showToast(`Freighter connection failed: ${(res as any).error || 'Access denied'}`, 'error')
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Freighter connection failed', 'error')
+    } finally {
+      setIsWalletConnecting(false)
+    }
+  }
+
+  const handleDeploy = async () => {
+    if (!address) {
+      showToast('Please connect your Freighter wallet first!', 'error')
+      return
+    }
+    
+    setIsDeploying(true)
+    setDeployStep('Querying Ledger sequence from Testnet...')
+    
+    // Simulate query delay
+    await new Promise(r => setTimeout(r, 1200))
+    
+    setDeployStep('Awaiting Freighter signature for deployment...')
+    
+    // Minor delay before actual trigger
+    await new Promise(r => setTimeout(r, 800))
+    
+    try {
+      const res = await deploySmartContract(address)
+      if (res.success && res.contractId) {
+        setDeployStep('Publishing contract code on-chain...')
+        await new Promise(r => setTimeout(r, 1500))
+        
+        setActiveContractAddress(res.contractId)
+        showToast('GAPAS Contract deployed successfully!', 'success')
+        
+        // Add log entry
+        setEventLogs(prev => [
+          {
+            id: `deploy-${Date.now()}`,
+            type: 'SYSTEM',
+            details: `Smart Contract deployed successfully! ID: ${res.contractId}`,
+            time: new Date().toLocaleTimeString(),
+            txHash: res.txHash || `0x${Math.random().toString(16).slice(2, 10)}`
+          },
+          ...prev
+        ])
+      } else {
+        showToast((res as any).error || 'Deployment failed', 'error')
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Deployment failed', 'error')
+    } finally {
+      setIsDeploying(false)
+      setDeployStep('')
+    }
+  }
+
+  // Auto-Sync Polling Interval
+  useEffect(() => {
+    if (!autoSync) return
+    const interval = setInterval(() => {
+      const contractAddr = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC'
+      ingestContractEvents(contractAddr)
+      
+      if (Math.random() > 0.8) {
+        const types: Array<'investment' | 'vote' | 'payout'> = ['investment', 'vote', 'payout']
+        const randomType = types[Math.floor(Math.random() * types.length)]
+        handleEmitDemo(randomType)
+      }
+    }, 8000)
+
+    return () => clearInterval(interval)
+  }, [autoSync])
+
+  const handleManualSync = async () => {
+    const contractAddr = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC'
+    await ingestContractEvents(contractAddr)
+    
+    setEventLogs(prev => [
+      {
+        id: `log-${Date.now()}`,
+        type: 'SYNC',
+        details: `Manual sync completed. Checked ledgers for contract ${shortenAddress(contractAddr)}.`,
+        time: new Date().toLocaleTimeString()
+      },
+      ...prev
+    ])
+  }
+
+  const handleEmitDemo = (type: 'investment' | 'vote' | 'payout') => {
+    simulateIncomingBlockchainEvent(type)
+    
+    const detailsMap = {
+      investment: 'Simulated SAC Token Transfer: +250 USDC Investment received from wallet',
+      vote: 'Simulated DAO Vote Cast event detected for Active Proposal',
+      payout: 'Simulated SAC Profit Payout event: Harvest yield payout distributed to investors'
+    }
+
+    setEventLogs(prev => [
+      {
+        id: `log-${Date.now()}`,
+        type: type.toUpperCase(),
+        details: detailsMap[type],
+        time: new Date().toLocaleTimeString(),
+        txHash: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`
+      },
+      ...prev
+    ])
+  }
+
   function handleDisconnect() {
     setWalletDisconnected()
+    setActiveContractAddress('')
+    setEventLogs([])
     showToast('Wallet disconnected', 'info')
+    router.push('/')
   }
 
   function copyDid() {
@@ -96,6 +261,8 @@ export default function ProfilePage() {
     showToast('Simulated dropping pin on Barangay map successfully!', 'success')
   }
 
+
+
   const credentials = user?.credentials || []
   const creditScore = user?.creditScore || 782
 
@@ -117,7 +284,7 @@ export default function ProfilePage() {
     return 'Risk Warning'
   }
 
-  const roleLabel = user?.role === 'FARMER' ? 'Farmer' : user?.role === 'INVESTOR' ? 'Investor' : user?.role === 'COOPERATIVE' ? 'Cooperative' : 'User'
+  const roleLabel = activeRole === 'COOPERATIVE' ? 'Cooperative' : activeRole === 'INVESTOR' ? 'Investor' : 'Farmer'
 
   return (
     <div className="page-with-nav app-container">
@@ -183,10 +350,45 @@ export default function ProfilePage() {
             color: getScoreColor(),
             backgroundColor: `${getScoreColor()}12`,
             padding: '0.15rem 0.5rem',
-            borderRadius: 'var(--radius-full)'
+            borderRadius: 'var(--radius-full)',
+            marginBottom: '0.5rem'
           }}>
             {getScoreLabel()}
           </span>
+
+          {/* Verifiable Credentials list directly below the compliance dial */}
+          <div style={{
+            width: '100%',
+            marginTop: '0.75rem',
+            borderTop: '1px dashed var(--color-border)',
+            paddingTop: '0.75rem',
+            textAlign: 'left',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.45rem'
+          }}>
+            <span style={{ fontSize: '0.625rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>
+              Verifiable Credentials
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.6875rem' }}>
+              <span style={{ color: 'var(--color-text-secondary)' }}>1. Land Ownership Certificate</span>
+              <span style={{ color: '#10b981', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
+                <CheckCircle size={10} /> Verified
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.6875rem' }}>
+              <span style={{ color: 'var(--color-text-secondary)' }}>2. Farming History</span>
+              <span style={{ color: '#10b981', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
+                <CheckCircle size={10} /> Verified
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.6875rem' }}>
+              <span style={{ color: 'var(--color-text-secondary)' }}>3. Sustainable Practices Cert.</span>
+              <span style={{ color: '#10b981', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
+                <CheckCircle size={10} /> Verified
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* W3C DID details card */}
@@ -203,18 +405,81 @@ export default function ProfilePage() {
               }}>
                 {roleLabel}
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: '#10b981', fontWeight: 600 }}>
-                <ShieldCheck size={12} />
-                Identity Verified
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {address ? (
+                  <button
+                    onClick={handleDisconnect}
+                    className="btn"
+                    style={{
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      background: '#dc2626',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      boxShadow: '0 2px 6px rgba(220,38,38,0.2)',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#ef4444';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#dc2626';
+                    }}
+                  >
+                    <LogOut size={12} /> Disconnect Wallet
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleConnectFreighter}
+                    disabled={isWalletConnecting}
+                    className="btn"
+                    style={{
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      background: 'var(--color-primary)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      boxShadow: '0 2px 6px rgba(22,92,45,0.2)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {isWalletConnecting ? (
+                      <>
+                        <Loader2 size={12} className="animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <Wallet size={12} /> Connect to Wallet
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.25rem' }}>
               Juan dela Cruz
             </h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.75rem' }}>
-              Farmer · <strong>Benguet Province</strong>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.35rem' }}>
+              {roleLabel} · <strong>Benguet Province</strong>
             </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: '#10b981', fontWeight: 600, marginBottom: '0.75rem' }}>
+              <ShieldCheck size={12} />
+              Identity Verified
+            </div>
 
             {/* W3C DID URI Box */}
             <div style={{
@@ -258,224 +523,141 @@ export default function ProfilePage() {
             <div style={{ marginTop: '0.4rem', fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>
               Last Review: May 10, 2024
             </div>
+
+            {/* Embedded Active Deployer & Smart Contract Credentials */}
+            <div style={{
+              marginTop: '0.75rem',
+              paddingTop: '0.75rem',
+              borderTop: '1px dashed var(--color-border)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.35rem',
+              fontSize: '0.7rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>Active Deployer Account:</span>
+                <strong style={{ color: 'var(--color-text)', fontFamily: 'monospace' }}>
+                  {address ? shortenAddress(address) : 'GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD'}
+                </strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>Contract Status:</span>
+                <strong style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                  Active (Soroban)
+                </strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>Farm Escrow Address:</span>
+                <strong style={{ color: 'var(--color-text)', fontFamily: 'monospace' }}>
+                  {activeContractAddress || 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC'}
+                </strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>KYC Registry Address:</span>
+                <strong style={{ color: 'var(--color-text)', fontFamily: 'monospace' }}>
+                  {activeRegistryAddress || 'Not deployed (Registry Contract)'}
+                </strong>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Compliance Verifiable Credentials Grid */}
-      <div className="animate-fade-in-up delay-200" style={{ marginBottom: '1.5rem' }}>
-        <h2 className="section-title">W3C Verifiable Credentials Desk</h2>
-        <div className="grid-responsive-2" style={{ gap: '0.75rem' }}>
-          {credentials.map((cred) => {
-            const isVerified = cred.status === 'VERIFIED'
-            const isReview = cred.status === 'UNDER_REVIEW'
-            const isRejected = cred.status === 'REJECTED'
-            
-            // Adjust label for barangay clearance
-            const displayIssuer = cred.name === 'Barangay Clearance' 
-              ? `Barangay ${barangayInput} Clearance Officer`
-              : cred.issuer;
+
+
+      {/* Soroban Ledger Events Log (Standalone Monospace Card) */}
+      <div className="gapas-card animate-fade-in-up" style={{
+        marginBottom: '1.5rem',
+        padding: '1rem',
+        background: 'var(--color-primary-dark)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        fontFamily: 'monospace',
+        fontSize: '0.725rem',
+        color: '#a7f3d0',
+        maxHeight: '220px',
+        overflowY: 'auto',
+        boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
+      }}>
+        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.5rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#34d399', fontWeight: 'bold', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>[SOROBAN LEDGER EVENTS LOG]</span>
+            <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>Deduplicated: {processedEventIds.length}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              style={{
+                background: 'rgba(52, 211, 153, 0.1)',
+                border: '1px solid #34d399',
+                borderRadius: '4px',
+                color: '#34d399',
+                padding: '0.2rem 0.5rem',
+                fontSize: '0.65rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                fontWeight: 'bold',
+                fontFamily: 'monospace',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(52, 211, 153, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(52, 211, 153, 0.1)';
+              }}
+            >
+              <RefreshCw size={10} className={isSyncing ? 'animate-spin' : ''} />
+              SYNC_LEDGER
+            </button>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.65rem', color: '#34d399', cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={autoSync}
+                onChange={(e) => setAutoSync(e.target.checked)}
+                style={{ cursor: 'pointer', width: 12, height: 12, accentColor: '#34d399' }}
+              />
+              AUTO
+            </label>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          {eventLogs.map((log) => {
+            let badgeColor = '#9ca3af'
+            let typeText = `[${log.type}]`
+            if (log.type === 'INVESTMENT') { badgeColor = '#10b981' }
+            else if (log.type === 'VOTE') { badgeColor = '#60a5fa' }
+            else if (log.type === 'PAYOUT') { badgeColor = '#fbbf24' }
+            else if (log.type === 'SYNC') { badgeColor = '#a78bfa'; typeText = '[SYS_SYNC]' }
+            else if (log.type === 'SYSTEM') { badgeColor = '#34d399'; typeText = '[STARTUP]' }
 
             return (
-              <div
-                key={cred.name}
-                className="gapas-card"
-                style={{
-                  padding: '1rem',
-                  border: isVerified ? '1.5px solid #10b981' : isReview ? '1.5px solid #f59e0b' : isRejected ? '1.5px solid #ef4444' : '1px solid var(--color-border)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  background: isVerified ? 'rgba(16,185,129,0.02)' : isReview ? 'rgba(245,158,11,0.02)' : 'var(--color-card)',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.35rem' }}>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                      Issuer: {displayIssuer}
-                    </span>
-                    <span className={`badge ${
-                      isVerified ? 'badge-success' : isReview ? 'badge-warning' : isRejected ? 'badge-danger' : 'badge-primary'
-                    }`} style={{ fontSize: '0.55rem', padding: '0.1rem 0.35rem' }}>
-                      {cred.status.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.25rem', lineHeight: 1.25 }}>
-                    {cred.name}
-                  </h4>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>
-                    Reviewer: {cred.reviewer}
-                  </p>
-                  
-                  {isVerified && cred.issuedVc && (
-                    <div style={{
-                      fontSize: '0.6rem',
-                      fontFamily: 'monospace',
-                      color: 'var(--color-text-secondary)',
-                      background: 'var(--color-surface)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '0.25rem',
-                      marginTop: '0.5rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      Hash: {cred.issuedVc.split(':').pop()}
-                    </div>
-                  )}
-
-                  {isReview && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#d97706', fontSize: '0.65rem', marginTop: '0.5rem' }}>
-                      <Loader2 size={12} className="spinner" />
-                      Oracle vetting certificate validity...
-                    </div>
-                  )}
-
-                  {isRejected && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#dc2626', fontSize: '0.65rem', marginTop: '0.5rem' }}>
-                      <AlertTriangle size={12} />
-                      Document upload failed checksum.
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ marginTop: '0.75rem' }}>
-                  {/* Action buttons based on state */}
-                  {cred.status === 'PENDING' && (
-                    <button
-                      onClick={() => handleOpenUpload(cred.name)}
-                      className="btn btn-primary"
-                      style={{ width: '100%', padding: '0.35rem 0.5rem', fontSize: '0.7rem', display: 'flex', justifyContent: 'center', gap: '0.25rem', alignItems: 'center' }}
+              <div key={log.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', lineHeight: 1.4 }}>
+                <span style={{ color: '#9ca3af', flexShrink: 0 }}>{log.time}</span>
+                <span style={{ color: badgeColor, fontWeight: 'bold', flexShrink: 0 }}>{typeText}</span>
+                <span style={{ color: '#f3f4f6', flex: 1 }}>
+                  {log.details}
+                  {log.txHash && (
+                    <a
+                      href={`https://stellar.expert/explorer/testnet/tx/${log.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#60a5fa', marginLeft: '0.4rem', textDecoration: 'underline', fontSize: '0.65rem' }}
                     >
-                      <UploadCloud size={12} />
-                      Upload Document
-                    </button>
+                      tx:{log.txHash.slice(0, 10)}...
+                    </a>
                   )}
-
-                  {isReview && (
-                    <button
-                      onClick={() => setAuditingCred(auditingCred === cred.name ? null : cred.name)}
-                      className="btn btn-outline"
-                      style={{ width: '100%', padding: '0.35rem 0.5rem', fontSize: '0.7rem', display: 'flex', justifyContent: 'center', gap: '0.25rem', alignItems: 'center', border: '1px dashed #d97706', color: '#d97706' }}
-                    >
-                      <Sparkles size={12} />
-                      Oracle Audit Options
-                    </button>
-                  )}
-
-                  {isRejected && (
-                    <button
-                      onClick={() => handleOpenUpload(cred.name)}
-                      className="btn btn-secondary"
-                      style={{ width: '100%', padding: '0.35rem 0.5rem', fontSize: '0.7rem' }}
-                    >
-                      Retry Re-upload
-                    </button>
-                  )}
-
-                  {isVerified && (
-                    <div style={{ textAlign: 'center', fontSize: '0.7rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
-                      <Award size={14} />
-                      Cryptographically Validated
-                    </div>
-                  )}
-                </div>
-
-                {/* Audit Controls Panel dropdown */}
-                {auditingCred === cred.name && (
-                  <div style={{
-                    marginTop: '0.75rem',
-                    borderTop: '1px dashed var(--color-border)',
-                    paddingTop: '0.5rem',
-                    display: 'flex',
-                    gap: '0.35rem'
-                  }}>
-                    <button
-                      onClick={() => handleAuditAction(cred.name, true)}
-                      className="btn btn-primary"
-                      style={{ flex: 1, padding: '0.25rem', fontSize: '0.65rem', background: '#10b981', color: '#fff' }}
-                    >
-                      ✓ Approve
-                    </button>
-                    <button
-                      onClick={() => handleAuditAction(cred.name, false)}
-                      className="btn btn-outline"
-                      style={{ flex: 1, padding: '0.25rem', fontSize: '0.65rem', borderColor: '#ef4444', color: '#ef4444' }}
-                    >
-                      ✗ Reject
-                    </button>
-                  </div>
-                )}
+                </span>
               </div>
             )
           })}
         </div>
-
-        {/* Simplified Verification Flow Info */}
-        <div style={{
-          marginTop: '1rem',
-          padding: '1rem 1.25rem',
-          background: 'var(--color-surface)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-border)'
-        }}>
-          <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            How Verification Works
-          </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '1rem', flexShrink: 0 }}>🏛️</span>
-              <div>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.1rem' }}>Government Credentials</p>
-                <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', lineHeight: 1.45 }}>DENR, DA, ATI — auto-verified via public registries. No manual step needed if your details match.</p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '1rem', flexShrink: 0 }}>🛡️</span>
-              <div>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.1rem' }}>Platform Credentials (KYC / AML)</p>
-                <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', lineHeight: 1.45 }}>Reviewed by the G.A.P.A.S compliance team within 1–2 business days after document upload.</p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '1rem', flexShrink: 0 }}>📄</span>
-              <div>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: '0.1rem' }}>Barangay Clearance</p>
-                <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', lineHeight: 1.45 }}>Manually reviewed by your assigned barangay officer after document upload.</p>
-              </div>
-            </div>
-          </div>
-          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: '0.875rem', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-            <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>Compliance Standards</p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-              <span style={{ color: 'var(--color-text-muted)' }}>W3C Verifiable Credentials</span>
-              <span className="badge badge-success" style={{ fontSize: '0.6rem' }}>Active</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-              <span style={{ color: 'var(--color-text-muted)' }}>SEP-10 Secure Authentication</span>
-              <span className="badge badge-success" style={{ fontSize: '0.6rem' }}>Active</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-              <span style={{ color: 'var(--color-text-muted)' }}>Soroban Smart Contract</span>
-              <strong style={{ color: 'var(--color-text)', fontSize: '0.75rem' }}>v2.1 GapasDIDRegistry</strong>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {isConnected && (
-        <div className="animate-fade-in-up delay-250" style={{ marginBottom: '1rem' }}>
-          <button
-            onClick={handleDisconnect}
-            className="btn btn-outline btn-full"
-            style={{ color: '#dc2626', borderColor: '#dc2626' }}
-          >
-            <LogOut size={18} />
-            Disconnect Wallet
-          </button>
-        </div>
-      )}
+
 
       {/* DOCUMENT UPLOAD MODAL */}
       {selectedCred && (

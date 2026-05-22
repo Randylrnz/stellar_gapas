@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Sprout, Wallet, BarChart3, User, LogOut, FileText, ClipboardList, Store } from 'lucide-react'
+import { Home, Sprout, Wallet, BarChart3, User, LogOut, FileText, ClipboardList, Store, Gavel } from 'lucide-react'
 import { useGapasStore } from '@/store/useGapasStore'
 import { useRouter } from 'next/navigation'
 
@@ -48,7 +48,7 @@ export default function SideNav() {
           { href: '/portfolio', icon: BarChart3, label: 'My Activities' },
           { href: '/wallet', icon: Wallet, label: 'Wallet' },
           { href: '/cooperative', icon: ClipboardList, label: 'Cooperative' },
-          { href: '/dao', icon: FileText, label: 'Proposals' },
+          { href: '/dao', icon: Gavel, label: 'Proposals' },
           { href: '/profile', icon: User, label: 'Profile' },
         ]
     }
@@ -58,12 +58,11 @@ export default function SideNav() {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo">
+      <Link href="/dashboard" className="sidebar-logo" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.5rem 0', cursor: 'pointer' }}>
         <span className="sidebar-logo-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
-          <Sprout size={24} style={{ color: 'var(--color-primary)' }} />
+          <img src="/Logo.png" alt="GAPAS Logo" style={{ width: '170px', height: '48px', objectFit: 'contain' }} />
         </span>
-        <span className="sidebar-logo-text">GAPAS</span>
-      </div>
+      </Link>
 
       {/* Premium Switcher Panel */}
       <div style={{ padding: '0 1rem', marginBottom: '1.5rem' }}>

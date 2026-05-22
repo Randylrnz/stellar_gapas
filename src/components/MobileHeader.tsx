@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Wallet, BarChart3, User, LogOut, FileText, ClipboardList, Menu, X, Store, Sprout } from 'lucide-react'
+import { Home, Wallet, BarChart3, User, LogOut, FileText, ClipboardList, Menu, X, Store, Sprout, Gavel } from 'lucide-react'
 import { useGapasStore } from '@/store/useGapasStore'
 
 export default function MobileHeader() {
@@ -50,7 +50,7 @@ export default function MobileHeader() {
           { href: '/portfolio', icon: BarChart3, label: 'My Activities' },
           { href: '/wallet', icon: Wallet, label: 'Wallet' },
           { href: '/cooperative', icon: ClipboardList, label: 'Cooperative' },
-          { href: '/dao', icon: FileText, label: 'Proposals' },
+          { href: '/dao', icon: Gavel, label: 'Proposals' },
           { href: '/profile', icon: User, label: 'Profile' },
         ]
     }
@@ -62,12 +62,9 @@ export default function MobileHeader() {
     <>
       {/* Top Header Bar */}
       <header className="mobile-header">
-        <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(27,67,50,0.08)', padding: '6px', borderRadius: '8px' }}>
-            <Sprout size={20} style={{ color: 'var(--color-primary)' }} />
-          </span>
-          <span style={{ fontFamily: 'var(--font-jakarta)', fontWeight: 800, fontSize: '1.1rem', color: 'var(--color-text)', letterSpacing: '0.03em' }}>
-            GAPAS
+        <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src="/Logo.png" alt="GAPAS Logo" style={{ width: '150px', height: '42px', objectFit: 'contain' }} />
           </span>
         </Link>
 
@@ -119,11 +116,8 @@ export default function MobileHeader() {
       <aside className={`mobile-drawer${isOpen ? ' open' : ''}`} aria-hidden={!isOpen}>
         {/* Drawer Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sprout size={20} style={{ color: 'var(--color-primary)' }} />
-            <span style={{ fontFamily: 'var(--font-jakarta)', fontWeight: 800, fontSize: '1.1rem', color: 'var(--color-text)' }}>
-              GAPAS MENU
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <img src="/Logo.png" alt="GAPAS Logo" style={{ width: '150px', height: '42px', objectFit: 'contain' }} />
           </div>
           <button
             onClick={() => setIsOpen(false)}

@@ -5,6 +5,7 @@ import MobileHeader from '@/components/MobileHeader'
 import Toast from '@/components/Toast'
 import { useGapasStore } from '@/store/useGapasStore'
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 const FarmingBackground = () => (
   <div style={{
@@ -90,21 +91,14 @@ const FarmingBackground = () => (
 )
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isConnected, setWalletConnected, setUser } = useGapasStore()
+  const { isConnected } = useGapasStore()
+  const router = useRouter()
 
   useEffect(() => {
     if (!isConnected) {
-      const mockAddress = 'GBTTGUEMWPFC53GBAHJMQIKD6IGDOLPRMSGPYQP34FKV73FJW5K6ZJZD'
-      setWalletConnected(mockAddress, 'testnet')
-      setUser({
-        id: mockAddress,
-        walletAddress: mockAddress,
-        role: 'INVESTOR',
-        displayName: 'Demo User',
-        createdAt: new Date().toISOString(),
-      })
+      router.push('/')
     }
-  }, [isConnected, setWalletConnected, setUser])
+  }, [isConnected, router])
 
   return (
     <div className="app-layout">

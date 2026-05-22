@@ -17,6 +17,9 @@ import {
 export const GAPAS_CONTRACT_ADDRESS =
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
 
+export const GAPAS_REGISTRY_ADDRESS =
+  process.env.NEXT_PUBLIC_REGISTRY_CONTRACT_ADDRESS || ''
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -385,17 +388,18 @@ export async function distributeProfitOnChain(params: {
     const { Contract, TransactionBuilder, nativeToScVal, Address } = sdk
     const contract = new Contract(contractAddr)
 
-    const farmerArg = new Address(trimmedFarmer).toScVal()
-    const farmArg = nativeToScVal(params.farmId, { type: 'string' })
+    const callerArg = new Address(trimmedFarmer).toScVal()
     const amountStroops = BigInt(Math.round(params.amountUsdc * 10_000_000))
     const amountArg = nativeToScVal(amountStroops, { type: 'i128' })
+    const usdcAddr = process.env.NEXT_PUBLIC_USDC_ISSUER || 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'
+    const usdcArg = new Address(usdcAddr).toScVal()
 
     const account = new sdk.Account(trimmedFarmer, sequence)
     const tx = new TransactionBuilder(account, {
       fee: sdk.BASE_FEE,
       networkPassphrase: NETWORK_PASSPHRASE,
     })
-      .addOperation(contract.call('distribute_profit', farmerArg, farmArg, amountArg))
+      .addOperation(contract.call('distribute_profit', amountArg, usdcArg, callerArg))
       .setTimeout(300)
       .build()
 
@@ -518,6 +522,329 @@ export async function deployGapasContract(params: {
       success: false,
       error: err instanceof Error ? err.message : 'Deployment failed',
     }
+  }
+}
+
+/**
+ * Register a new farmer profile in G.A.P.A.S. platform on-chain.
+ */
+export async function registerFarmerOnChain(params: {
+  farmerAddress: string
+  name: string
+  location: string
+  contractAddress?: string
+}): Promise<{ success: true; txHash: string; stellarLabUrl?: string } | { success: false; error: string; stellarLabUrl?: string }> {
+  const registryAddr = params.contractAddress || GAPAS_REGISTRY_ADDRESS
+  if (!registryAddr) {
+    return { success: false, error: 'Registry contract address not configured.' }
+  }
+
+  const cleanFarmer = params.farmerAddress.includes(':') ? params.farmerAddress.split(':').pop() || params.farmerAddress : params.farmerAddress
+  const trimmedFarmer = cleanFarmer.trim()
+
+  const sequence = await getAccountSequence(trimmedFarmer)
+  if (!sequence) {
+    return { success: false, error: 'Could not fetch account sequence. Please make sure your Testnet account is funded (try Friendbot).' }
+  }
+
+  try {
+    const sdk = await StellarSdk()
+    const { Contract, TransactionBuilder, Address, nativeToScVal } = sdk
+    const contract = new Contract(registryAddr)
+
+    const farmerArg = new Address(trimmedFarmer).toScVal()
+    const nameArg = nativeToScVal(params.name, { type: 'string' })
+    const locationArg = nativeToScVal(params.location, { type: 'string' })
+
+    const account = new sdk.Account(trimmedFarmer, sequence)
+    const tx = new TransactionBuilder(account, {
+      fee: sdk.BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(contract.call('register_farmer', farmerArg, nameArg, locationArg))
+      .setTimeout(300)
+      .build()
+
+    const xdr = tx.toXDR()
+    const stellarLabUrl = getStellarLabSignUrl(xdr)
+
+    const simRes = await fetch(SOROBAN_RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'simulateTransaction',
+        params: { transaction: xdr },
+      }),
+    })
+
+    const simJson = await simRes.json()
+    if (simJson.error) {
+      return { success: false, error: `Simulation failed: ${simJson.error.message}`, stellarLabUrl }
+    }
+
+    const preparedXdr = simJson.result?.transaction || xdr
+
+    const signResult = await signWithFreighter(preparedXdr)
+    if ('error' in signResult) {
+      return { success: false, error: `Signing rejected: ${signResult.error}`, stellarLabUrl }
+    }
+
+    const submitResult = await sendTransaction(signResult.signedXdr)
+    if (!submitResult.success) {
+      return { success: false, error: submitResult.error, stellarLabUrl }
+    }
+
+    return { success: true, txHash: submitResult.data.hash, stellarLabUrl }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Farmer registration failed.' }
+  }
+}
+
+/**
+ * Verify a farmer's KYC, set compliance score and verify land ownership credentials on-chain.
+ */
+export async function verifyKycOnChain(params: {
+  farmerAddress: string
+  complianceScore: number
+  landVerified: boolean
+  contractAddress?: string
+}): Promise<{ success: true; txHash: string; stellarLabUrl?: string } | { success: false; error: string; stellarLabUrl?: string }> {
+  const registryAddr = params.contractAddress || GAPAS_REGISTRY_ADDRESS
+  if (!registryAddr) {
+    return { success: false, error: 'Registry contract address not configured.' }
+  }
+
+  const cleanFarmer = params.farmerAddress.includes(':') ? params.farmerAddress.split(':').pop() || params.farmerAddress : params.farmerAddress
+  const trimmedFarmer = cleanFarmer.trim()
+
+  const sequence = await getAccountSequence(trimmedFarmer)
+  if (!sequence) {
+    return { success: false, error: 'Could not fetch account sequence.' }
+  }
+
+  try {
+    const sdk = await StellarSdk()
+    const { Contract, TransactionBuilder, Address, nativeToScVal } = sdk
+    const contract = new Contract(registryAddr)
+
+    const farmerArg = new Address(trimmedFarmer).toScVal()
+    const complianceArg = nativeToScVal(params.complianceScore, { type: 'u32' })
+    const landVerifiedArg = nativeToScVal(params.landVerified, { type: 'bool' })
+
+    const account = new sdk.Account(trimmedFarmer, sequence)
+    const tx = new TransactionBuilder(account, {
+      fee: sdk.BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(contract.call('verify_kyc', farmerArg, complianceArg, landVerifiedArg))
+      .setTimeout(300)
+      .build()
+
+    const xdr = tx.toXDR()
+    const stellarLabUrl = getStellarLabSignUrl(xdr)
+
+    const simRes = await fetch(SOROBAN_RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'simulateTransaction',
+        params: { transaction: xdr },
+      }),
+    })
+
+    const simJson = await simRes.json()
+    if (simJson.error) {
+      return { success: false, error: `Simulation failed: ${simJson.error.message}`, stellarLabUrl }
+    }
+
+    const preparedXdr = simJson.result?.transaction || xdr
+
+    const signResult = await signWithFreighter(preparedXdr)
+    if ('error' in signResult) {
+      return { success: false, error: `Signing rejected: ${signResult.error}`, stellarLabUrl }
+    }
+
+    const submitResult = await sendTransaction(signResult.signedXdr)
+    if (!submitResult.success) {
+      return { success: false, error: submitResult.error, stellarLabUrl }
+    }
+
+    return { success: true, txHash: submitResult.data.hash, stellarLabUrl }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'KYC verification failed.' }
+  }
+}
+
+/**
+ * Query farmer's KYC profile on-chain.
+ */
+export async function getFarmerKycOnChain(params: {
+  farmerAddress: string
+  contractAddress?: string
+}): Promise<{
+  success: boolean
+  farmer?: {
+    name: string
+    location: string
+    complianceScore: number
+    landVerified: boolean
+    isVerified: boolean
+  }
+  error?: string
+}> {
+  const registryAddr = params.contractAddress || GAPAS_REGISTRY_ADDRESS
+  if (!registryAddr) {
+    return { success: false, error: 'Registry contract address not configured.' }
+  }
+
+  const cleanFarmer = params.farmerAddress.includes(':') ? params.farmerAddress.split(':').pop() || params.farmerAddress : params.farmerAddress
+  const trimmedFarmer = cleanFarmer.trim()
+
+  try {
+    const sdk = await StellarSdk()
+    const { Contract, TransactionBuilder, Address, scValToNative, xdr: xdrNs } = sdk
+    const contract = new Contract(registryAddr)
+
+    const farmerArg = new Address(trimmedFarmer).toScVal()
+
+    const sequence = await getAccountSequence(trimmedFarmer) || '0'
+    const account = new sdk.Account(trimmedFarmer, sequence)
+    
+    const tx = new TransactionBuilder(account, {
+      fee: sdk.BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(contract.call('get_farmer', farmerArg))
+      .setTimeout(300)
+      .build()
+
+    const xdr = tx.toXDR()
+    
+    const simRes = await fetch(SOROBAN_RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'simulateTransaction',
+        params: { transaction: xdr },
+      }),
+    })
+
+    const simJson = await simRes.json()
+    if (simJson.error) {
+      return { success: false, error: simJson.error.message }
+    }
+
+    const results = simJson.result?.results
+    if (!results || results.length === 0) {
+      return { success: false, error: 'No results returned from simulation.' }
+    }
+
+    const base64Xdr = results[0].xdr
+    if (!base64Xdr) {
+      return { success: false, error: 'Empty result XDR.' }
+    }
+
+    const scVal = xdrNs.ScVal.fromXDR(base64Xdr, 'base64')
+    const nativeVal = scValToNative(scVal)
+
+    if (!nativeVal) {
+      return { success: true }
+    }
+
+    return {
+      success: true,
+      farmer: {
+        name: nativeVal.name?.toString() || '',
+        location: nativeVal.location?.toString() || '',
+        complianceScore: Number(nativeVal.compliance_score ?? 0),
+        landVerified: Boolean(nativeVal.land_verified),
+        isVerified: Boolean(nativeVal.is_verified),
+      }
+    }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to query KYC.' }
+  }
+}
+
+/**
+ * Query an investor's total funded amount for a specific farm on-chain.
+ */
+export async function getInvestorFundingOnChain(params: {
+  investorAddress: string
+  contractAddress?: string
+}): Promise<{ success: boolean; amountUsdc?: number; error?: string }> {
+  const contractAddr = params.contractAddress || GAPAS_CONTRACT_ADDRESS
+  if (!contractAddr) {
+    return { success: false, error: 'Contract address not configured.' }
+  }
+
+  const cleanInvestor = params.investorAddress.includes(':') ? params.investorAddress.split(':').pop() || params.investorAddress : params.investorAddress
+  const trimmedInvestor = cleanInvestor.trim()
+
+  try {
+    const sdk = await StellarSdk()
+    const { Contract, TransactionBuilder, Address, scValToNative, xdr: xdrNs } = sdk
+    const contract = new Contract(contractAddr)
+
+    const investorArg = new Address(trimmedInvestor).toScVal()
+
+    const sequence = await getAccountSequence(trimmedInvestor) || '0'
+    const account = new sdk.Account(trimmedInvestor, sequence)
+    
+    const tx = new TransactionBuilder(account, {
+      fee: sdk.BASE_FEE,
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(contract.call('get_investor_funding', investorArg))
+      .setTimeout(300)
+      .build()
+
+    const xdr = tx.toXDR()
+    
+    const simRes = await fetch(SOROBAN_RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'simulateTransaction',
+        params: { transaction: xdr },
+      }),
+    })
+
+    const simJson = await simRes.json()
+    if (simJson.error) {
+      return { success: false, error: simJson.error.message }
+    }
+
+    const results = simJson.result?.results
+    if (!results || results.length === 0) {
+      return { success: false, error: 'No results returned from simulation.' }
+    }
+
+    const base64Xdr = results[0].xdr
+    if (!base64Xdr) {
+      return { success: false, error: 'Empty result XDR.' }
+    }
+
+    const scVal = xdrNs.ScVal.fromXDR(base64Xdr, 'base64')
+    const nativeVal = scValToNative(scVal)
+
+    const amountStroops = BigInt(nativeVal || 0)
+    const amountUsdc = Number(amountStroops) / 10_000_000
+
+    return {
+      success: true,
+      amountUsdc,
+    }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to query funding balance.' }
   }
 }
 

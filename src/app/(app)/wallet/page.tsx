@@ -23,7 +23,8 @@ export default function WalletPage() {
     addTransaction,
     addReceipt,
     showToast,
-    user
+    user,
+    simulateIncomingBlockchainEvent
   } = useGapasStore()
   
   const [copied, setCopied] = useState(false)
@@ -33,6 +34,7 @@ export default function WalletPage() {
   // Deposit State
   const [depositMethod, setDepositMethod] = useState<'GCASH' | 'BANK'>('GCASH')
   const [depositAmount, setDepositAmount] = useState<string>('')
+  const [depositRefNum, setDepositRefNum] = useState<string>('REF-' + Math.floor(10000000 + Math.random() * 90000000))
   const [depositLoading, setDepositLoading] = useState(false)
 
   // Withdraw State
@@ -66,6 +68,10 @@ export default function WalletPage() {
       showToast('Enter a valid deposit amount', 'error')
       return
     }
+    if (!depositRefNum.trim()) {
+      showToast('Reference Number is required', 'error')
+      return
+    }
 
     setDepositLoading(true)
     await new Promise((r) => setTimeout(r, 1200))
@@ -81,7 +87,7 @@ export default function WalletPage() {
       txHash,
       type: 'RETURN',
       amount: amt,
-      memo: `Deposited via ${depositMethod}`,
+      memo: `Deposited via ${depositMethod} (Ref: ${depositRefNum})`,
       status: 'CONFIRMED',
       createdAt: new Date().toISOString()
     })
@@ -90,7 +96,7 @@ export default function WalletPage() {
       id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
       txHash,
       type: 'TRANSFER',
-      fromDid: `external:${depositMethod.toLowerCase()}`,
+      fromDid: `external:${depositMethod.toLowerCase()}:${depositRefNum}`,
       toDid: did,
       amountUsdc: amt,
       amountPhp: amt * USDC_TO_PHP_RATE,
@@ -101,6 +107,8 @@ export default function WalletPage() {
 
     showToast(`Deposited ${formatUSDC(amt)} USDC successfully!`, 'success')
     setDepositAmount('')
+    // Regenerate dynamic ref number for next transaction
+    setDepositRefNum('REF-' + Math.floor(10000000 + Math.random() * 90000000))
   }
 
   const handleExecuteWithdrawal = async (e: React.FormEvent) => {
@@ -323,6 +331,20 @@ export default function WalletPage() {
                   )
                 })}
               </div>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>
+                Reference Number (GCash/Bank Transfer Ref)
+              </label>
+              <input
+                type="text"
+                value={depositRefNum}
+                onChange={(e) => setDepositRefNum(e.target.value)}
+                className="form-input"
+                placeholder="e.g. REF-12345678"
+                required
+              />
             </div>
 
             <div style={{ marginBottom: '1.25rem' }}>

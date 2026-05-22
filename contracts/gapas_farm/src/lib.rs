@@ -5,7 +5,7 @@ use soroban_sdk::{
 };
 
 #[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FarmStatus {
     Active = 0,
     Funded = 1,
@@ -86,12 +86,23 @@ impl GapasFarmContract {
         }
 
         env.storage().instance().set(&symbol_short!("FARM"), &state);
+
+        // Record individual investor's contribution on-chain
+        let mut investor_balance: i128 = env.storage().persistent().get(&investor).unwrap_or(0);
+        investor_balance += amount;
+        env.storage().persistent().set(&investor, &investor_balance);
+
         true
     }
 
     /// Get current funding state
     pub fn get_funding(env: Env) -> FarmState {
         env.storage().instance().get(&symbol_short!("FARM")).unwrap()
+    }
+
+    /// Get on-chain balance funded by a specific investor
+    pub fn get_investor_funding(env: Env, investor: Address) -> i128 {
+        env.storage().persistent().get(&investor).unwrap_or(0)
     }
 
     /// Distribute profit after harvest

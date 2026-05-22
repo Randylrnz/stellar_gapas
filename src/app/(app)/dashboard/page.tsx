@@ -26,166 +26,14 @@ export default function DashboardPage() {
     generateTicket,
     showToast,
     farmBarangay,
-    farmCoordinates,
-    ingestContractEvents,
-    simulateIncomingBlockchainEvent,
-    isSyncing,
-    processedEventIds,
-    deploySmartContract,
-    setWalletConnected,
-    setUser
+    farmCoordinates
   } = useGapasStore()
   const router = useRouter()
   const [createdTicketId, setCreatedTicketId] = useState<string | null>(null)
   const [showCoopHelpConfirm, setShowCoopHelpConfirm] = useState(false)
   const [selectedChartFarm, setSelectedChartFarm] = useState<string>('all')
 
-  const [showNetworkHub, setShowNetworkHub] = useState(true)
-  const [autoSync, setAutoSync] = useState(false)
-  const [eventLogs, setEventLogs] = useState<Array<{ id: string; type: string; details: string; time: string; txHash?: string }>>([
-    { id: 'initial-1', type: 'SYSTEM', details: 'GAPAS Event Listener initialized on Stellar Testnet', time: new Date().toLocaleTimeString() }
-  ])
-
-  // Smart Contract Deployment states
-  const [isDeploying, setIsDeploying] = useState(false)
-  const [deployStep, setDeployStep] = useState<string>('')
-  const [activeContractAddress, setActiveContractAddress] = useState<string>(
-    process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || ''
-  )
-  const [isWalletConnecting, setIsWalletConnecting] = useState(false)
-
-  const handleConnectFreighter = async () => {
-    setIsWalletConnecting(true)
-    try {
-      const { connectFreighter, isFreighterInstalled } = await import('@/lib/stellar')
-      const installed = await isFreighterInstalled()
-      if (!installed) {
-        showToast('Freighter wallet extension not detected. Please install it first.', 'error')
-        setIsWalletConnecting(false)
-        return
-      }
-      
-      const res = await connectFreighter()
-      if (res.success && res.address) {
-        setWalletConnected(res.address, res.network || 'testnet')
-        setUser({
-          id: res.address,
-          walletAddress: res.address,
-          role: 'INVESTOR',
-          displayName: 'Juan dela Cruz (Freighter)',
-          createdAt: new Date().toISOString(),
-        })
-        showToast(`Freighter connected: ${res.address.slice(0, 6)}...${res.address.slice(-4)}`, 'success')
-      } else {
-        showToast(`Freighter connection failed: ${(res as any).error || 'Access denied'}`, 'error')
-      }
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Freighter connection failed', 'error')
-    } finally {
-      setIsWalletConnecting(false)
-    }
-  }
-
-  const handleDeploy = async () => {
-    if (!address) {
-      showToast('Please connect your Freighter wallet first!', 'error')
-      return
-    }
-    
-    setIsDeploying(true)
-    setDeployStep('Querying Ledger sequence from Testnet...')
-    
-    // Simulate query delay
-    await new Promise(r => setTimeout(r, 1200))
-    
-    setDeployStep('Awaiting Freighter signature for deployment...')
-    
-    // Minor delay before actual trigger
-    await new Promise(r => setTimeout(r, 800))
-    
-    try {
-      const res = await deploySmartContract(address)
-      if (res.success && res.contractId) {
-        setDeployStep('Publishing contract code on-chain...')
-        await new Promise(r => setTimeout(r, 1500))
-        
-        setActiveContractAddress(res.contractId)
-        showToast('GAPAS Contract deployed successfully!', 'success')
-        
-        // Add log entry
-        setEventLogs(prev => [
-          {
-            id: `deploy-${Date.now()}`,
-            type: 'SYSTEM',
-            details: `🚀 Smart Contract deployed successfully! ID: ${res.contractId}`,
-            time: new Date().toLocaleTimeString(),
-            txHash: res.txHash || `0x${Math.random().toString(16).slice(2, 10)}`
-          },
-          ...prev
-        ])
-      } else {
-        showToast((res as any).error || 'Deployment failed', 'error')
-      }
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Deployment failed', 'error')
-    } finally {
-      setIsDeploying(false)
-      setDeployStep('')
-    }
-  }
-
-  // Auto-Sync Polling Interval
-  useEffect(() => {
-    if (!autoSync) return
-    const interval = setInterval(() => {
-      const contractAddr = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC'
-      ingestContractEvents(contractAddr)
-      
-      if (Math.random() > 0.8) {
-        const types: Array<'investment' | 'vote' | 'payout'> = ['investment', 'vote', 'payout']
-        const randomType = types[Math.floor(Math.random() * types.length)]
-        handleEmitDemo(randomType)
-      }
-    }, 8000)
-
-    return () => clearInterval(interval)
-  }, [autoSync])
-
-  const handleManualSync = async () => {
-    const contractAddr = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC'
-    await ingestContractEvents(contractAddr)
-    
-    setEventLogs(prev => [
-      {
-        id: `log-${Date.now()}`,
-        type: 'SYNC',
-        details: `Manual sync completed. Checked ledgers for contract ${shortenAddress(contractAddr)}.`,
-        time: new Date().toLocaleTimeString()
-      },
-      ...prev
-    ])
-  }
-
-  const handleEmitDemo = (type: 'investment' | 'vote' | 'payout') => {
-    simulateIncomingBlockchainEvent(type)
-    
-    const detailsMap = {
-      investment: 'Simulated SAC Token Transfer: +250 USDC Investment received from wallet',
-      vote: 'Simulated DAO Vote Cast event detected for Active Proposal',
-      payout: 'Simulated SAC Profit Payout event: Harvest yield payout distributed to investors'
-    }
-
-    setEventLogs(prev => [
-      {
-        id: `log-${Date.now()}`,
-        type: type.toUpperCase(),
-        details: detailsMap[type],
-        time: new Date().toLocaleTimeString(),
-        txHash: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`
-      },
-      ...prev
-    ])
-  }
+  // Removed local network hub state variables and handler functions which are now handled in the Profile page
 
   // Calculate stats dynamically
   const investorTotalInvested = myInvestments.reduce((s, i) => s + i.amount, 0)
@@ -327,396 +175,7 @@ export default function DashboardPage() {
     )
   }
 
-  const renderStellarNetworkHub = () => {
-    return (
-      <div className="gapas-card animate-fade-in-up" style={{
-        marginBottom: '1.5rem',
-        padding: '1.25rem',
-        background: 'linear-gradient(135deg, rgba(27,67,50,0.06) 0%, rgba(249,173,0,0.04) 100%)',
-        border: '1px solid rgba(27,67,50,0.15)',
-        boxShadow: 'var(--shadow-md)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
-          backgroundImage: 'radial-gradient(var(--color-primary-light) 0.5px, transparent 0.5px)',
-          backgroundSize: '12px 12px',
-          opacity: 0.1,
-          pointerEvents: 'none'
-        }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <div style={{
-              width: 36, height: 36,
-              borderRadius: '50%',
-              background: 'rgba(27,67,50,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 12px rgba(27,67,50,0.15)'
-            }}>
-              <Activity size={18} className={isSyncing || autoSync || isDeploying ? 'animate-spin' : ''} color="var(--color-primary)" />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '0.9375rem', fontWeight: 900, color: 'var(--color-text)', margin: 0 }}>
-                Stellar Network Hub
-              </h3>
-              <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.1rem' }}>
-                <span style={{
-                  width: 6, height: 6,
-                  borderRadius: '50%',
-                  background: autoSync || isDeploying ? '#10b981' : '#f59e0b',
-                  display: 'inline-block',
-                  boxShadow: autoSync || isDeploying ? '0 0 8px #10b981' : '0 0 8px #f59e0b',
-                  animation: 'pulse 1.8s infinite'
-                }} />
-                {isDeploying ? 'Deploying Soroban Contract...' : autoSync ? 'Live Polling Active (getEvents RPC)' : 'Sync Standby'} · Testnet
-              </span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <button
-              onClick={() => setShowNetworkHub(!showNetworkHub)}
-              className="btn btn-outline"
-              style={{ padding: '0.35rem 0.6rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem', minWidth: 'unset', cursor: 'pointer' }}
-            >
-              {showNetworkHub ? 'Hide Panel' : 'Show Panel'}
-            </button>
-          </div>
-        </div>
-
-        {showNetworkHub && (
-          <div className="animate-scale-in" style={{ position: 'relative', zIndex: 1 }}>
-            {/* Smart Contract Deployment Section */}
-            <div style={{
-              background: 'var(--color-surface)',
-              border: '1px solid rgba(27,67,50,0.12)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '1.25rem',
-              marginBottom: '1rem',
-              boxShadow: 'var(--shadow-sm)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                <div>
-                  <h4 style={{ fontSize: '0.875rem', fontWeight: 900, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}>
-                    🚀 Soroban Smart Contract Deployment
-                  </h4>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', margin: '0.2rem 0 0' }}>
-                    Compile and register the GAPAS agricultural escrow logic on Stellar Testnet (Soroban).
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <div style={{
-                    fontSize: '0.6875rem',
-                    padding: '0.25rem 0.5rem',
-                    background: 'rgba(27,67,50,0.08)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid rgba(27,67,50,0.15)',
-                    fontWeight: 700,
-                    color: 'var(--color-primary)'
-                  }}>
-                    Target: Testnet
-                  </div>
-                  <div style={{
-                    fontSize: '0.6875rem',
-                    padding: '0.25rem 0.5rem',
-                    background: 'rgba(59,130,246,0.08)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid rgba(59,130,246,0.15)',
-                    fontWeight: 700,
-                    color: '#2563eb'
-                  }}>
-                    Soroban v21
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid-responsive-2" style={{ gap: '0.75rem', marginBottom: '1rem', alignItems: 'stretch' }}>
-                {/* Deployment details */}
-                <div style={{
-                  background: 'var(--color-card)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.75rem 1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  gap: '0.4rem'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>Active Deployer Account:</span>
-                    <strong style={{ color: 'var(--color-text)', fontFamily: 'monospace' }}>
-                      {address ? shortenAddress(address) : 'Not Connected'}
-                    </strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>Contract Status:</span>
-                    <strong style={{ color: activeContractAddress.startsWith('C') ? '#10b981' : '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: activeContractAddress.startsWith('C') ? '#10b981' : '#f59e0b', display: 'inline-block' }} />
-                      {activeContractAddress.startsWith('C') ? 'Active (Soroban)' : 'Uninitialized'}
-                    </strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '0.1rem', borderTop: '1px dashed var(--color-border)', paddingTop: '0.4rem' }}>
-                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>Contract Address:</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <strong style={{ color: 'var(--color-text)', fontFamily: 'monospace', fontSize: '0.7rem' }}>
-                        {activeContractAddress ? `${activeContractAddress.slice(0, 10)}...${activeContractAddress.slice(-10)}` : 'N/A'}
-                      </strong>
-                      {activeContractAddress && (
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(activeContractAddress);
-                            showToast('Contract Address copied!', 'success');
-                          }}
-                          style={{
-                            border: 'none',
-                            background: 'none',
-                            padding: '2px',
-                            cursor: 'pointer',
-                            color: 'var(--color-primary)',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}
-                          title="Copy Contract Address"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Deployment actions */}
-                <div style={{
-                  background: 'var(--color-card)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.75rem 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {isDeploying ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', textAlign: 'center', width: '100%' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div className="animate-spin" style={{
-                          width: '18px',
-                          height: '18px',
-                          border: '2px solid rgba(27,67,50,0.1)',
-                          borderTopColor: 'var(--color-primary)',
-                          borderRadius: '50%'
-                        }} />
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary)' }}>
-                          Deploying Escrow Logic...
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '0.6875rem', fontFamily: 'monospace', color: 'var(--color-text-secondary)', animation: 'pulse 1.5s infinite' }}>
-                        {deployStep}
-                      </span>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%' }}>
-                      <button
-                        onClick={handleDeploy}
-                        disabled={!address}
-                        className="btn btn-primary"
-                        style={{
-                          width: '100%',
-                          padding: '0.625rem',
-                          fontSize: '0.8rem',
-                          fontWeight: 800,
-                          background: address ? 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)' : 'var(--color-border)',
-                          borderColor: 'transparent',
-                          color: address ? '#fff' : 'var(--color-text-muted)',
-                          boxShadow: address ? '0 4px 14px rgba(27,67,50,0.25)' : 'none',
-                          cursor: address ? 'pointer' : 'not-allowed',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.4rem',
-                          transition: 'all 0.25s ease'
-                        }}
-                      >
-                        🚀 Deploy GAPAS Contract to Testnet
-                      </button>
-
-                      <button
-                        onClick={handleConnectFreighter}
-                        disabled={isWalletConnecting}
-                        className="btn btn-outline"
-                        style={{
-                          width: '100%',
-                          padding: '0.5rem',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.4rem',
-                          border: '1px solid var(--color-primary)',
-                          color: 'var(--color-primary)',
-                          background: 'rgba(27,67,50,0.03)',
-                          transition: 'all 0.2s ease',
-                          boxShadow: 'var(--shadow-sm)'
-                        }}
-                      >
-                        {isWalletConnecting ? (
-                          <>
-                            <div className="animate-spin" style={{
-                              width: '12px',
-                              height: '12px',
-                              border: '2px solid rgba(27,67,50,0.1)',
-                              borderTopColor: 'var(--color-primary)',
-                              borderRadius: '50%'
-                            }} />
-                            Connecting Freighter Wallet...
-                          </>
-                        ) : (
-                          <>🔌 Connect Freighter Wallet (Localhost)</>
-                        )}
-                      </button>
-
-                      {!address && (
-                        <p style={{ fontSize: '0.65rem', color: '#ef4444', textAlign: 'center', margin: 0, fontWeight: 600 }}>
-                          ⚠️ Please connect Freighter Wallet first to deploy.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid-responsive-2" style={{ gap: '0.75rem', marginBottom: '1rem' }}>
-              <div style={{
-                display: 'flex',
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '0.75rem 1rem',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div>
-                  <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0 }}>Live getEvents Monitor</h4>
-                  <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', margin: '0.1rem 0 0' }}>Poll ledger RPC for contract events</p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <button
-                    onClick={handleManualSync}
-                    disabled={isSyncing}
-                    className="btn btn-secondary"
-                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem', minWidth: 'unset', cursor: 'pointer' }}
-                  >
-                    <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
-                    Sync Ledger
-                  </button>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={autoSync}
-                      onChange={(e) => setAutoSync(e.target.checked)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    Auto
-                  </label>
-                </div>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '0.75rem 1rem',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div>
-                  <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0 }}>Capstone Interactive Demo</h4>
-                  <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', margin: '0.1rem 0 0' }}>Simulate SAC & Soroban events live</p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.35rem' }}>
-                  <button
-                    onClick={() => handleEmitDemo('investment')}
-                    className="btn btn-primary"
-                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.65rem', minWidth: 'unset', background: '#10b981', color: '#fff', cursor: 'pointer' }}
-                  >
-                    + Invest
-                  </button>
-                  <button
-                    onClick={() => handleEmitDemo('vote')}
-                    className="btn btn-primary"
-                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.65rem', minWidth: 'unset', background: '#2563eb', color: '#fff', cursor: 'pointer' }}
-                  >
-                    + Vote
-                  </button>
-                  <button
-                    onClick={() => handleEmitDemo('payout')}
-                    className="btn btn-primary"
-                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.65rem', minWidth: 'unset', background: '#f59e0b', color: '#fff', cursor: 'pointer' }}
-                  >
-                    + Payout
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div style={{
-              background: 'var(--color-primary-dark)',
-              border: '1px solid rgba(255,255,255,0.05)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '0.875rem',
-              fontFamily: 'monospace',
-              fontSize: '0.725rem',
-              color: '#a7f3d0',
-              maxHeight: '160px',
-              overflowY: 'auto',
-              boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
-            }}>
-              <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.375rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', color: '#34d399', fontWeight: 'bold' }}>
-                <span>[SOROBAN LEDGER EVENTS LOG]</span>
-                <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>Deduplicated: {processedEventIds.length}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {eventLogs.map((log) => {
-                  let badgeColor = '#9ca3af'
-                  let typeText = `[${log.type}]`
-                  if (log.type === 'INVESTMENT') { badgeColor = '#10b981' }
-                  else if (log.type === 'VOTE') { badgeColor = '#60a5fa' }
-                  else if (log.type === 'PAYOUT') { badgeColor = '#fbbf24' }
-                  else if (log.type === 'SYNC') { badgeColor = '#a78bfa'; typeText = '[SYS_SYNC]' }
-                  else if (log.type === 'SYSTEM') { badgeColor = '#34d399'; typeText = '[STARTUP]' }
-
-                  return (
-                    <div key={log.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', lineHeight: 1.4 }}>
-                      <span style={{ color: '#9ca3af', flexShrink: 0 }}>{log.time}</span>
-                      <span style={{ color: badgeColor, fontWeight: 'bold', flexShrink: 0 }}>{typeText}</span>
-                      <span style={{ color: '#f3f4f6', flex: 1 }}>
-                        {log.details}
-                        {log.txHash && (
-                          <a 
-                            href={`https://stellar.expert/explorer/testnet/tx/${log.txHash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: '#60a5fa', marginLeft: '0.4rem', textDecoration: 'underline', fontSize: '0.65rem' }}
-                          >
-                            tx:{log.txHash.slice(0, 10)}...
-                          </a>
-                        )}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
 
   // --- 1. INVESTOR VIEW ---
   const renderInvestorDashboard = () => {
@@ -732,7 +191,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <h1 style={{ fontSize: '1.5rem', color: '#fff', marginBottom: '0.375rem', fontFamily: 'var(--font-jakarta)' }}>
-              Kamusta Ka-Agri!
+              Kumusta Ka-Agri!
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)', marginBottom: '1rem' }}>
               Stellar Address: {address ? shortenAddress(address) : 'Connecting...'}
@@ -746,25 +205,31 @@ export default function DashboardPage() {
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255,255,255,0.15)',
               }}>
-                <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
+                <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
+                  Total Income
+                </p>
+                <p style={{ fontSize: '1.25rem', color: '#fff', fontWeight: 800, fontFamily: 'var(--font-jakarta)' }}>
+                  {formatUSDC(investorTotalReturns)} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>USDC</span>
+                </p>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.2rem' }}>
+                  ≈ {formatPHP(investorTotalReturns * USDC_TO_PHP_RATE)}
+                </p>
+              </div>
+              <div style={{
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.875rem',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}>
+                <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
                   Total Invested
                 </p>
                 <p style={{ fontSize: '1.25rem', color: '#fff', fontWeight: 800, fontFamily: 'var(--font-jakarta)' }}>
                   {formatUSDC(investorTotalInvested)} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>USDC</span>
                 </p>
-              </div>
-              <div style={{
-                background: 'rgba(249,173,0,0.15)',
-                borderRadius: 'var(--radius-md)',
-                padding: '0.875rem',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(249,173,0,0.25)',
-              }}>
-                <p style={{ fontSize: '0.6875rem', color: 'rgba(249,173,0,0.8)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
-                  Total Returns
-                </p>
-                <p style={{ fontSize: '1.25rem', color: '#f9ad00', fontWeight: 800, fontFamily: 'var(--font-jakarta)' }}>
-                  {formatUSDC(investorTotalReturns)} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>USDC</span>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.2rem' }}>
+                  ≈ {formatPHP(investorTotalInvested * USDC_TO_PHP_RATE)}
                 </p>
               </div>
             </div>
@@ -872,7 +337,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <h1 style={{ fontSize: '1.5rem', color: '#fff', marginBottom: '0.375rem', fontFamily: 'var(--font-jakarta)' }}>
-              Kamusta Ka-Agri!
+              Kumusta Ka-Agri!
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)', marginBottom: '1rem' }}>
               DID: did:stellar:GAPAS:GC3DRQQ...AB74MX
@@ -886,28 +351,31 @@ export default function DashboardPage() {
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255,255,255,0.15)',
               }}>
-                <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
+                <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
+                  Total Income
+                </p>
+                <p style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 800, fontFamily: 'var(--font-jakarta)' }}>
+                  {formatUSDC(investorTotalReturns)} <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>USDC</span>
+                </p>
+                <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.2rem' }}>
+                  ≈ {formatPHP(investorTotalReturns * USDC_TO_PHP_RATE)}
+                </p>
+              </div>
+              <div style={{
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.875rem',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}>
+                <p style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
                   Total Invested
                 </p>
                 <p style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 800, fontFamily: 'var(--font-jakarta)' }}>
                   {formatUSDC(investorTotalInvested)} <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>USDC</span>
                 </p>
-                <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.2rem' }}>
+                <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.2rem' }}>
                   ≈ {formatPHP(investorTotalInvested * USDC_TO_PHP_RATE)}
-                </p>
-              </div>
-              <div style={{
-                background: 'rgba(249,173,0,0.15)',
-                borderRadius: 'var(--radius-md)',
-                padding: '0.875rem',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(249,173,0,0.25)',
-              }}>
-                <p style={{ fontSize: '0.6875rem', color: 'rgba(249,173,0,0.8)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>
-                  Total Returns
-                </p>
-                <p style={{ fontSize: '1.15rem', color: '#f9ad00', fontWeight: 800, fontFamily: 'var(--font-jakarta)' }}>
-                  {formatUSDC(investorTotalReturns)} <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>USDC</span>
                 </p>
               </div>
             </div>
@@ -920,14 +388,15 @@ export default function DashboardPage() {
           <div className="responsive-grid-actions">
             <button
               onClick={handleCoopHelpDeskClick}
+              className="action-hover-move"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.875rem 0.5rem',
-                background: 'var(--color-card)',
-                border: '1px solid var(--color-border)',
+                background: 'rgba(22, 92, 45, 0.04)',
+                border: '1.5px solid var(--color-primary)',
                 borderRadius: 'var(--radius-lg)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
@@ -938,28 +407,29 @@ export default function DashboardPage() {
                 width: 44,
                 height: 44,
                 borderRadius: 'var(--radius-md)',
-                background: 'rgba(27,67,50,0.1)',
+                background: 'rgba(22,92,45,0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
                 <ClipboardList size={20} color="var(--color-primary)" />
               </div>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-primary-dark)', textAlign: 'center' }}>
                 Coop Help Desk
               </span>
             </button>
 
             <Link
               href="/create-farm"
+              className="action-hover-move"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.875rem 0.5rem',
-                background: 'var(--color-card)',
-                border: '1px solid var(--color-border)',
+                background: 'rgba(110, 170, 43, 0.04)',
+                border: '1.5px solid #6eaa2b',
                 borderRadius: 'var(--radius-lg)',
                 textDecoration: 'none',
                 transition: 'all 0.2s ease',
@@ -970,28 +440,29 @@ export default function DashboardPage() {
                 width: 44,
                 height: 44,
                 borderRadius: 'var(--radius-md)',
-                background: 'rgba(45,106,79,0.1)',
+                background: 'rgba(110,170,43,0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-                <Sprout size={20} color="#2d6a4f" />
+                <Sprout size={20} color="#6eaa2b" />
               </div>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4d7a1c', textAlign: 'center' }}>
                 Register My Asset
               </span>
             </Link>
 
             <Link
               href="/wallet"
+              className="action-hover-move"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.875rem 0.5rem',
-                background: 'var(--color-card)',
-                border: '1px solid var(--color-border)',
+                background: 'rgba(205, 212, 30, 0.04)',
+                border: '1.5px solid #cdd41e',
                 borderRadius: 'var(--radius-lg)',
                 textDecoration: 'none',
                 transition: 'all 0.2s ease',
@@ -1002,28 +473,29 @@ export default function DashboardPage() {
                 width: 44,
                 height: 44,
                 borderRadius: 'var(--radius-md)',
-                background: 'rgba(249,173,0,0.12)',
+                background: 'rgba(205,212,30,0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-                <Wallet size={20} color="#f9ad00" />
+                <Wallet size={20} color="#cdd41e" />
               </div>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-primary-dark)', textAlign: 'center' }}>
                 My Wallet
               </span>
             </Link>
 
             <Link
               href="/dao"
+              className="action-hover-move"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.875rem 0.5rem',
-                background: 'var(--color-card)',
-                border: '1px solid var(--color-border)',
+                background: 'rgba(12, 51, 25, 0.04)',
+                border: '1.5px solid #0c3319',
                 borderRadius: 'var(--radius-lg)',
                 textDecoration: 'none',
                 transition: 'all 0.2s ease',
@@ -1034,14 +506,14 @@ export default function DashboardPage() {
                 width: 44,
                 height: 44,
                 borderRadius: 'var(--radius-md)',
-                background: 'rgba(59,130,246,0.1)',
+                background: 'rgba(12,51,25,0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-                <Gavel size={20} color="#3b82f6" />
+                <Gavel size={20} color="#0c3319" />
               </div>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0c3319', textAlign: 'center' }}>
                 Proposals
               </span>
             </Link>
@@ -1078,20 +550,36 @@ export default function DashboardPage() {
               <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
                 Displaying localized weather for <strong>Barangay {farmBarangay}</strong> — coordinates <strong>{farmCoordinates?.lat?.toFixed(4)} N, {farmCoordinates?.lng?.toFixed(4)} E</strong>.
               </p>
-              <div className="grid-responsive-3" style={{ gap: '0.5rem' }}>
-                <div style={{ padding: '0.6rem 0.4rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', background: 'rgba(34,197,94,0.05)' }}>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', fontWeight: 600, display: 'block' }}>Brgy. {farmBarangay}</span>
-                  <span className="badge badge-success" style={{ fontSize: '0.6rem', marginTop: '0.2rem' }}>LOW RISK</span>
+              
+              {/* High-visibility parameter grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+                gap: '0.75rem',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ padding: '0.75rem 0.5rem', border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', background: 'rgba(22,92,45,0.03)' }}>
+                  <Thermometer size={18} color="var(--color-primary)" style={{ margin: '0 auto 0.25rem' }} />
+                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', display: 'block', fontWeight: 600 }}>Temperature</span>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--color-text)', display: 'block', marginTop: '0.15rem' }}>28°C</strong>
                 </div>
-                <div style={{ padding: '0.6rem 0.4rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', background: 'var(--color-surface)' }}>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', display: 'block' }}>Temperature</span>
-                  <strong style={{ fontSize: '0.85rem', color: 'var(--color-text)', display: 'block', marginTop: '0.2rem' }}>28°C</strong>
+                <div style={{ padding: '0.75rem 0.5rem', border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', background: 'rgba(22,92,45,0.03)' }}>
+                  <Droplet size={18} color="var(--color-primary)" style={{ margin: '0 auto 0.25rem' }} />
+                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', display: 'block', fontWeight: 600 }}>Humidity</span>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--color-text)', display: 'block', marginTop: '0.15rem' }}>82%</strong>
                 </div>
-                <div style={{ padding: '0.6rem 0.4rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', background: 'var(--color-surface)' }}>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', display: 'block' }}>Forecast (7-Day)</span>
-                  <strong style={{ fontSize: '0.85rem', color: 'var(--color-text)', display: 'block', marginTop: '0.2rem' }}>Sunny Intervals</strong>
+                <div style={{ padding: '0.75rem 0.5rem', border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', background: 'rgba(22,92,45,0.03)' }}>
+                  <CloudRain size={18} color="var(--color-primary)" style={{ margin: '0 auto 0.25rem' }} />
+                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', display: 'block', fontWeight: 600 }}>Rain Forecast</span>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--color-text)', display: 'block', marginTop: '0.15rem' }}>10% Precip.</strong>
+                </div>
+                <div style={{ padding: '0.75rem 0.5rem', border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', background: 'rgba(22,92,45,0.03)' }}>
+                  <Wind size={18} color="var(--color-primary)" style={{ margin: '0 auto 0.25rem' }} />
+                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', display: 'block', fontWeight: 600 }}>Wind Speed</span>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--color-text)', display: 'block', marginTop: '0.15rem' }}>12 km/h ENE</strong>
                 </div>
               </div>
+
             </div>
           )}
         </div>
@@ -1209,141 +697,280 @@ export default function DashboardPage() {
 
         {/* Farmer Assets */}
         <div className="animate-fade-in-up delay-200" style={{ marginBottom: '1.5rem' }}>
-          <h2 className="section-title">My Registered Tokenized Assets ({farmerFarms.length})</h2>
-          {farmerFarms.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {/* Example tokenized asset 1 */}
-              <div className="gapas-card" style={{ padding: '1rem', border: '1px dashed var(--color-border)', opacity: 0.85 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                  <div>
-                    <span style={{
-                      fontSize: '0.65rem',
-                      backgroundColor: 'var(--color-primary-light)',
-                      color: '#fff',
-                      padding: '0.15rem 0.4rem',
-                      borderRadius: 'var(--radius-sm)',
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      marginRight: '0.5rem'
+          <h2 className="section-title">My Registered Tokenized Assets (2)</h2>
+          <div className="responsive-grid-2" style={{ gap: '1rem' }}>
+            {/* Card 1: Verde Rice Terraces */}
+            <Link
+              href="/farms/farm-1"
+              className="gapas-card action-hover-move"
+              style={{
+                padding: '1.25rem',
+                textDecoration: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s ease',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-card)'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      background: 'rgba(22,92,45,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}>
-                      CROP-7821
-                    </span>
-                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-text)', display: 'inline-block' }}>
-                      Benguet Strawberry Farm (Demo)
-                    </h3>
+                      <Leaf size={16} color="var(--color-primary)" />
+                    </div>
+                    <div>
+                      <span style={{
+                        fontSize: '0.6rem',
+                        backgroundColor: 'var(--color-primary-light)',
+                        color: '#fff',
+                        padding: '0.1rem 0.35rem',
+                        borderRadius: 'var(--radius-sm)',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        display: 'inline-block',
+                        marginBottom: '0.15rem'
+                      }}>
+                        CROP-0001
+                      </span>
+                      <h3 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', margin: 0 }}>
+                        Verde Rice Terraces
+                      </h3>
+                    </div>
                   </div>
-                  <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>ACTIVE</span>
+                  <span className="badge badge-success" style={{ fontSize: '0.6rem' }}>ACTIVE</span>
                 </div>
-                <div className="grid-responsive-2" style={{ gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
-                  <div><strong>Asset Type:</strong> Crop</div>
-                  <div><strong>Estimated Val:</strong> ₱228,600</div>
-                </div>
-                <div className="progress-bar-container" style={{ marginBottom: '0.375rem' }}>
-                  <div className="progress-bar-fill" style={{ width: '30%' }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>30% Crowdfunded</span>
-                  <span style={{ color: 'var(--color-text-muted)' }}>1,200 / 4,000 USDC</span>
+                <div className="grid-responsive-2" style={{ gap: '0.5rem', fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
+                  <div><strong>Crop:</strong> Rice (Palay)</div>
+                  <div><strong>Location:</strong> Sta. Rosa, Laguna</div>
+                  <div><strong>Estimated Val:</strong> ₱250,000</div>
+                  <div><strong>Expected Return:</strong> 18% APY</div>
                 </div>
               </div>
-              {/* Example tokenized asset 2 */}
-              <div className="gapas-card" style={{ padding: '1rem', border: '1px dashed var(--color-border)', opacity: 0.85 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                  <div>
-                    <span style={{
-                      fontSize: '0.65rem',
-                      backgroundColor: 'var(--color-primary-light)',
-                      color: '#fff',
-                      padding: '0.15rem 0.4rem',
-                      borderRadius: 'var(--radius-sm)',
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      marginRight: '0.5rem'
+              <div>
+                <div className="progress-bar-container" style={{ marginBottom: '0.375rem' }}>
+                  <div className="progress-bar-fill" style={{ width: '85%' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem' }}>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 700 }}>85% Funded</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>3,750 / 5,000 USDC</span>
+                </div>
+              </div>
+            </Link>
+
+            {/* Card 2: Bukidnon Corn Highlands */}
+            <Link
+              href="/farms/farm-2"
+              className="gapas-card action-hover-move"
+              style={{
+                padding: '1.25rem',
+                textDecoration: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s ease',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-card)'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      background: 'rgba(110,170,43,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}>
-                      LIVE-4432
-                    </span>
-                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-text)', display: 'inline-block' }}>
-                      Atok Native Hog Farm (Demo)
-                    </h3>
+                      <Sprout size={16} color="#6eaa2b" />
+                    </div>
+                    <div>
+                      <span style={{
+                        fontSize: '0.6rem',
+                        backgroundColor: '#6eaa2b',
+                        color: '#fff',
+                        padding: '0.1rem 0.35rem',
+                        borderRadius: 'var(--radius-sm)',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        display: 'inline-block',
+                        marginBottom: '0.15rem'
+                      }}>
+                        CROP-0002
+                      </span>
+                      <h3 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', margin: 0 }}>
+                        Bukidnon Corn Highlands
+                      </h3>
+                    </div>
                   </div>
-                  <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>PENDING</span>
+                  <span className="badge badge-success" style={{ fontSize: '0.6rem' }}>ACTIVE</span>
                 </div>
-                <div className="grid-responsive-2" style={{ gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
-                  <div><strong>Asset Type:</strong> Livestock</div>
-                  <div><strong>Estimated Val:</strong> ₱344,580</div>
+                <div className="grid-responsive-2" style={{ gap: '0.5rem', fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
+                  <div><strong>Crop:</strong> White Corn</div>
+                  <div><strong>Location:</strong> Valencia, Bukidnon</div>
+                  <div><strong>Estimated Val:</strong> ₱400,000</div>
+                  <div><strong>Expected Return:</strong> 22% APY</div>
                 </div>
+              </div>
+              <div>
                 <div className="progress-bar-container" style={{ marginBottom: '0.375rem' }}>
-                  <div className="progress-bar-fill" style={{ width: '0%' }} />
+                  <div className="progress-bar-fill" style={{ width: '70%' }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Awaiting Verification</span>
-                  <span style={{ color: 'var(--color-text-muted)' }}>0 / 6,000 USDC</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem' }}>
+                  <span style={{ color: '#6eaa2b', fontWeight: 700 }}>70% Funded</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>5,600 / 8,000 USDC</span>
                 </div>
               </div>
-              <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textAlign: 'center', fontStyle: 'italic' }}>
-                These are sample assets. Register your own to see them here.
-              </p>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                <button onClick={handleCreateTicket} className="btn btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}>Create Coop Ticket</button>
-                <Link href="/create-farm" className="btn btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', textDecoration: 'none', background: 'var(--color-primary)', color: '#fff' }}>Register My Asset</Link>
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {farmerFarms.map((farm) => {
-                const progress = getFundingProgress(farm.currentFunding, farm.fundingGoal)
-                return (
-                  <div key={farm.id} className="gapas-card" style={{ padding: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                      <div>
-                        <span style={{
-                          fontSize: '0.65rem',
-                          backgroundColor: 'var(--color-primary-light)',
-                          color: '#fff',
-                          padding: '0.15rem 0.4rem',
-                          borderRadius: 'var(--radius-sm)',
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          marginRight: '0.5rem'
-                        }}>
-                          {farm.tokenId || `${farm.assetType || 'ASSET'}-TKN`}
-                        </span>
-                        <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-text)', display: 'inline-block' }}>
-                          {farm.name}
-                        </h3>
-                      </div>
-                      <span className={`badge ${
-                        farm.status === 'ACTIVE' ? 'badge-info' : 
-                        farm.status === 'FUNDED' ? 'badge-success' : 
-                        farm.status === 'HARVESTING' ? 'badge-warning' : 'badge-primary'
-                      }`} style={{ fontSize: '0.65rem' }}>
-                        {farm.status}
-                      </span>
-                    </div>
+            </Link>
 
-                    <div className="grid-responsive-2" style={{ gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
-                      <div>
-                        <strong>Asset Type:</strong> {farm.assetType || 'Crop'}
-                      </div>
-                      <div>
-                        <strong>Estimated Val:</strong> {formatPHP(farm.valuePhp || farm.fundingGoal * USDC_TO_PHP_RATE)}
-                      </div>
+            {/* Card 3: Pampanga Free-Range Hog Farm */}
+            <Link
+              href="/farms/farm-3"
+              className="gapas-card action-hover-move"
+              style={{
+                padding: '1.25rem',
+                textDecoration: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s ease',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-card)'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      background: 'rgba(59,130,246,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Activity size={16} color="#3b82f6" />
                     </div>
-
-                    <div className="progress-bar-container" style={{ marginBottom: '0.375rem' }}>
-                      <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
-                      <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{progress}% Crowdfunded</span>
-                      <span style={{ color: 'var(--color-text-muted)' }}>
-                        {formatUSDC(farm.currentFunding)} / {formatUSDC(farm.fundingGoal)} USDC
+                    <div>
+                      <span style={{
+                        fontSize: '0.6rem',
+                        backgroundColor: '#3b82f6',
+                        color: '#fff',
+                        padding: '0.1rem 0.35rem',
+                        borderRadius: 'var(--radius-sm)',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        display: 'inline-block',
+                        marginBottom: '0.15rem'
+                      }}>
+                        LIVE-0003
                       </span>
+                      <h3 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', margin: 0 }}>
+                        Pampanga Free-Range Hog Farm
+                      </h3>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                  <span className="badge badge-success" style={{ fontSize: '0.6rem' }}>ACTIVE</span>
+                </div>
+                <div className="grid-responsive-2" style={{ gap: '0.5rem', fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
+                  <div><strong>Livestock:</strong> Hogs</div>
+                  <div><strong>Location:</strong> San Fernando, Pampanga</div>
+                  <div><strong>Estimated Val:</strong> ₱600,000</div>
+                  <div><strong>Expected Return:</strong> 28% APY</div>
+                </div>
+              </div>
+              <div>
+                <div className="progress-bar-container" style={{ marginBottom: '0.375rem' }}>
+                  <div className="progress-bar-fill" style={{ width: '35%' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem' }}>
+                  <span style={{ color: '#3b82f6', fontWeight: 700 }}>35% Funded</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>4,200 / 12,000 USDC</span>
+                </div>
+              </div>
+            </Link>
+
+            {/* Card 4: Ilocos Garlic & Onion Farm */}
+            <Link
+              href="/farms/farm-4"
+              className="gapas-card action-hover-move"
+              style={{
+                padding: '1.25rem',
+                textDecoration: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s ease',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-card)'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      background: 'rgba(205,212,30,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Zap size={16} color="#cdd41e" />
+                    </div>
+                    <div>
+                      <span style={{
+                        fontSize: '0.6rem',
+                        backgroundColor: '#cdd41e',
+                        color: 'var(--color-primary-dark)',
+                        padding: '0.1rem 0.35rem',
+                        borderRadius: 'var(--radius-sm)',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        display: 'inline-block',
+                        marginBottom: '0.15rem'
+                      }}>
+                        CROP-0004
+                      </span>
+                      <h3 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--color-text)', margin: 0 }}>
+                        Ilocos Garlic & Onion Farm
+                      </h3>
+                    </div>
+                  </div>
+                  <span className="badge badge-warning" style={{ fontSize: '0.6rem' }}>COMPLETED</span>
+                </div>
+                <div className="grid-responsive-2" style={{ gap: '0.5rem', fontSize: '0.72rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
+                  <div><strong>Crop:</strong> Garlic & Sibuyas</div>
+                  <div><strong>Location:</strong> Batac, Ilocos Norte</div>
+                  <div><strong>Estimated Val:</strong> ₱325,000</div>
+                  <div><strong>Expected Return:</strong> 35% APY</div>
+                </div>
+              </div>
+              <div>
+                <div className="progress-bar-container" style={{ marginBottom: '0.375rem' }}>
+                  <div className="progress-bar-fill" style={{ width: '100%' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem' }}>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 700 }}>100% Funded</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>6,500 / 6,500 USDC</span>
+                </div>
+              </div>
+            </Link>
+          </div>
         </div>
 
         {/* My Transactions */}
@@ -1614,7 +1241,6 @@ export default function DashboardPage() {
   return (
     <div className="page-with-nav app-container">
       {renderCoopHelpModal()}
-      {renderStellarNetworkHub()}
       {activeRole === 'INVESTOR' && renderInvestorDashboard()}
       {activeRole === 'FARMER' && renderFarmerDashboard()}
       {activeRole === 'COOPERATIVE' && renderCooperativeDashboard()}

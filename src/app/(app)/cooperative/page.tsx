@@ -38,6 +38,7 @@ export default function CooperativePortalPage() {
   
   const [activeTab, setActiveTab] = useState<'queue' | 'history'>('queue')
   const [farmerTab, setFarmerTab] = useState<'create' | 'coops'>('coops')
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   const assignedCoop = cooperatives.find(
     coop => coop.barangay.toLowerCase().trim() === farmBarangay.toLowerCase().trim()
@@ -83,8 +84,13 @@ export default function CooperativePortalPage() {
   }, [fundingGoal])
 
   const handleFarmerCreateTicket = () => {
+    setShowConfirmModal(true)
+  }
+
+  const confirmGenerateTicket = () => {
     const id = generateTicket()
     showToast(`Cooperative Help Ticket ${id} created successfully!`, 'success')
+    setShowConfirmModal(false)
   }
 
   const handleProcessTicket = (ticket: Ticket) => {
@@ -261,7 +267,7 @@ export default function CooperativePortalPage() {
                     color: 'var(--color-text-secondary)'
                   }}>{t.id}</span>
                   <p style={{ fontSize: '0.85rem', fontWeight: 600, marginTop: '0.25rem' }}>
-                    Assigned to: General Network Queue (Any Partner Cooperative)
+                    Assigned to: {farmBarangay || 'Sta. Rosa'} Cooperative
                   </p>
                   <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
                     Created: {new Date(t.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -748,6 +754,40 @@ export default function CooperativePortalPage() {
       </div>
 
       {activeRole === 'FARMER' ? renderFarmerView() : renderCooperativeDesk()}
+
+      {showConfirmModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '1rem'
+        }}>
+          <div className="gapas-card animate-scale-up" style={{ width: '100%', maxWidth: '400px', padding: '1.75rem', position: 'relative', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.75rem' }}>
+              Are you sure?
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              Are you sure you want to generate a new help ticket number?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="btn btn-outline"
+                style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmGenerateTicket}
+                className="btn btn-primary"
+                style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem', background: 'var(--color-primary)', color: '#fff' }}
+              >
+                Yes, Generate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

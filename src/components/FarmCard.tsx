@@ -15,6 +15,21 @@ function shortenWallet(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
+function getAssetImage(farm: Farm): string {
+  if (!farm) return '/Crops.png'
+  const typeStr = (farm.assetType || '').toUpperCase()
+  const cropStr = farm.cropType || ''
+  const livestockStr = farm.livestockType || ''
+  
+  if (typeStr === 'LIVESTOCK' || livestockStr) {
+    return '/LiveStock.png'
+  }
+  if (typeStr === 'EQUIPMENT' || farm.equipmentDetails) {
+    return '/Equipment.png'
+  }
+  return '/Crops.png'
+}
+
 export default function FarmCard({ farm, compact = false }: FarmCardProps) {
   const progress = getFundingProgress(farm.currentFunding, farm.fundingGoal)
   const assetLabel = farm.cropType || farm.livestockType || farm.assetType || 'Unknown'
@@ -23,29 +38,26 @@ export default function FarmCard({ farm, compact = false }: FarmCardProps) {
   return (
     <Link href={`/farms/${farm.id}`} className="farm-card animate-fade-in-up" id={`farm-card-${farm.id}`}>
       {/* Header image area */}
-      <div className="farm-card-image" style={{ position: 'relative' }}>
+      <div className="farm-card-image" style={{ position: 'relative', overflow: 'hidden' }}>
+        <img
+          src={getAssetImage(farm)}
+          alt={farm.name}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
+        />
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(135deg, #1B4332 0%, #2d6a4f 60%, #40916c 100%)',
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
+          justifyContent: 'flex-end',
+          padding: '0.75rem',
         }}>
-          <div style={{
-            width: 56,
-            height: 56,
-            background: 'rgba(255,255,255,0.12)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <Sprout size={28} color="rgba(255,255,255,0.9)" />
-          </div>
-          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8125rem', fontWeight: 500 }}>
+          <span style={{ color: 'rgba(255,255,255,0.95)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {assetLabel}
           </span>
         </div>
@@ -55,22 +67,26 @@ export default function FarmCard({ farm, compact = false }: FarmCardProps) {
           top: '0.75rem',
           left: '0.75rem',
         }}>
-          <span className={`badge ${farm.status === 'FUNDED' ? 'badge-success' : farm.status === 'ACTIVE' ? 'badge-info' : 'badge-warning'}`}>
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '0.35rem 0.65rem',
+            borderRadius: '6px',
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: '#ffffff',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+            backgroundColor: farm.status === 'FUNDED' || farm.status === 'COMPLETED'
+              ? '#16a34a' 
+              : farm.status === 'ACTIVE'
+                ? '#165c2d' 
+                : '#d97706'
+          }}>
             {farm.status}
           </span>
         </div>
-        {/* Coop badge */}
-        {farm.cooperativeEnabled && farm.cooperative && (
-          <div style={{
-            position: 'absolute',
-            bottom: '0.75rem',
-            left: '0.75rem',
-          }}>
-            <span className="coop-badge">
-              🤝 {farm.cooperative.name.split(' ').slice(0, 2).join(' ')}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Card body */}

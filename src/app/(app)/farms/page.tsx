@@ -49,7 +49,7 @@ const SAMPLE_MY_ASSETS = [
 ]
 
 export default function FarmsPage() {
-  const { setFarms, farms, address, activeRole } = useGapasStore()
+  const { setFarms, farms, address, activeRole, simulateIncomingBlockchainEvent, showToast } = useGapasStore()
   const [search, setSearch] = useState('')
   const [filterCategory, setFilterCategory] = useState<FilterCategory>('ALL')
 
@@ -104,6 +104,7 @@ export default function FarmsPage() {
           Register My Asset
         </Link>
       </div>
+
 
       {/* Search bar */}
       <div className="animate-fade-in-up delay-100" style={{ marginBottom: '1rem' }}>
@@ -192,11 +193,23 @@ export default function FarmsPage() {
                         {asset.name}
                       </h3>
                     </div>
-                    <span className={`badge ${
-                      asset.status === 'ACTIVE' ? 'badge-info' :
-                      asset.status === 'FUNDED' ? 'badge-success' :
-                      asset.status === 'PENDING' ? 'badge-warning' : 'badge-primary'
-                    }`} style={{ fontSize: '0.65rem' }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '4px',
+                      fontSize: '0.65rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      color: '#ffffff',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                      backgroundColor: asset.status === 'FUNDED' || asset.status === 'COMPLETED'
+                        ? '#16a34a' 
+                        : asset.status === 'ACTIVE'
+                          ? '#165c2d' 
+                          : '#d97706'
+                    }}>
                       {asset.status}
                     </span>
                   </div>
